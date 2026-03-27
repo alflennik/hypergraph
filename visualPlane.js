@@ -81,6 +81,9 @@ function distanceToLine(px, py, x1, y1, x2, y2) {
 // MOUSE DOWN — start drawing a new line.
 // ============================================================
 canvas.addEventListener("mousedown", function(event) {
+  // Focus the canvas so it can receive keyboard events (e.g. Delete/Backspace).
+  canvas.focus();
+
   isDrawing = true;
   hasDragged = false;
 
@@ -160,9 +163,16 @@ canvas.addEventListener("mouseup", function(event) {
 
 // ============================================================
 // KEYBOARD — press Delete or Backspace to remove selected line.
+// Scoped to the canvas element so it only fires when the canvas
+// has focus. This prevents conflicts with browser navigation
+// (e.g. Backspace triggering browser back). The canvas receives
+// focus automatically on mousedown via canvas.focus().
 // ============================================================
-document.addEventListener("keydown", function(event) {
+canvas.addEventListener("keydown", function(event) {
   if (event.key === "Delete" || event.key === "Backspace") {
+    // Prevent the browser from navigating back on Backspace.
+    event.preventDefault();
+
     if (selectedLineIndex === -1) return;
 
     // Remove the selected line from the array.

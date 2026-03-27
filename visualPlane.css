@@ -2,6 +2,8 @@ canvas {
   border: 1px solid black;
   display: block;
   margin: 0 auto;
+  /* Remove the default focus outline since the canvas border is sufficient. */
+  outline: none;
 }
 
 #header {
