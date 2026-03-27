@@ -18,6 +18,15 @@ const CONFIG = {
   clickThreshold: 8,             // Max distance (px) from a line to count as a click on it.
   dragThreshold: 15,             // Min distance (px) mouse must move to count as a drag.
 
+  // Node settings.
+  nodeRadius: 6,                 // Radius of regular node circles (screen px).
+  nodeColor: "blue",             // Fill color for regular nodes.
+  nodeSnapRadius: 12,            // Max distance (screen px) to snap to an existing node.
+
+  // Nexus node — the permanent, undeletable center node.
+  nexusRadius: 15,               // Radius of the Nexus node (screen px).
+  nexusColor: "green",           // Fill color for the Nexus node.
+
   // Zoom settings.
   minZoom: 0.1,                  // Minimum zoom level (10%).
   maxZoom: 10,                   // Maximum zoom level (1000%).
@@ -140,28 +149,146 @@ document.getElementById("zoom-out-btn").addEventListener("click", function() {
 });
 
 document.getElementById("zoom-reset-btn").addEventListener("click", function() {
-  camera.panX = 0;
-  camera.panY = 0;
-  camera.zoom = 1;
-  updateZoomDisplay();
-  redrawCanvas();
+  centerOnNexus();
 });
 
 // ============================================================
-// Drawing state — lines and selection.
+// Recenter button — pans and zooms to center the Nexus node.
 // ============================================================
+document.getElementById("recenter-btn").addEventListener("click", function() {
+  centerOnNexus();
+});
 
-// Array to store all drawn lines as { x1, y1, x2, y2 } objects.
-// Coordinates are in world space.
+// Center the view on the Nexus node (world origin) and reset zoom to 100%.
+// Pan is set so that world (0,0) maps to the center of the canvas.
+function centerOnNexus() {
+  camera.zoom = 1;
+  camera.panX = canvas.width / 2;
+  camera.panY = canvas.height / 2;
+  updateZoomDisplay();
+  redrawCanvas();
+}
+
+// ============================================================
+// Graph data model — nodes and lines.
+//
+// nodes[]: Array of { x, y } objects in world coordinates.
+//          Nodes are created only at the END of a drawn line.
+//          They serve as visible snap targets for future lines.
+//
+// lines[]: Array of { startNode, endNode, startX, startY } objects.
+//          endNode is always an index into nodes[].
+//          startNode is a node index if the line snapped to an
+//          existing node, or -1 if the line started from empty
+//          space (in which case startX/startY hold the raw position).
+//
+// This lets lines share endpoints via nodes. Deleting a line
+// removes only that edge. Orphaned nodes (nodes with no remaining
+// lines referencing them) are garbage-collected automatically.
+// ============================================================
+let nodes = [];
 let lines = [];
+
+// The Nexus node is always nodes[0]. It sits at the world origin (0, 0),
+// is always visible, and can never be deleted.
+const NEXUS_INDEX = 0;
+nodes.push({ x: 0, y: 0 });
 
 // Index of the currently selected line (-1 means nothing selected).
 let selectedLineIndex = -1;
 
+// ============================================================
+// Node helpers.
+// ============================================================
+
+// Find the nearest node to a world-space point within a maximum
+// screen-pixel radius. Returns the node index or -1 if none found.
+function findNearestNode(worldX, worldY, maxScreenPx) {
+  const maxWorldDist = maxScreenPx / camera.zoom;
+  let bestIndex = -1;
+  let bestDist = Infinity;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const dx = nodes[i].x - worldX;
+    const dy = nodes[i].y - worldY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < bestDist && dist <= maxWorldDist) {
+      bestDist = dist;
+      bestIndex = i;
+    }
+  }
+
+  return bestIndex;
+}
+
+// Get or create a node at a world position. If an existing node
+// is within snap radius, reuse it. Otherwise, create a new one.
+// Returns the node index.
+function getOrCreateNode(worldX, worldY) {
+  const existing = findNearestNode(worldX, worldY, CONFIG.nodeSnapRadius);
+  if (existing !== -1) return existing;
+
+  nodes.push({ x: worldX, y: worldY });
+  return nodes.length - 1;
+}
+
+// Check if a node is referenced by any line.
+function isNodeUsed(nodeIndex) {
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startNode === nodeIndex || lines[i].endNode === nodeIndex) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Remove orphaned nodes (not referenced by any line) and update
+// all line indices to reflect the compacted nodes array.
+// The Nexus node (index 0) is never removed regardless of usage.
+function removeOrphanedNodes() {
+  // Build a set of all node indices currently in use.
+  // Always include the Nexus so it survives cleanup.
+  const usedSet = new Set();
+  usedSet.add(NEXUS_INDEX);
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startNode !== -1) usedSet.add(lines[i].startNode);
+    usedSet.add(lines[i].endNode);
+  }
+
+  // Build an index mapping: oldIndex -> newIndex (or -1 if removed).
+  const indexMap = new Array(nodes.length);
+  const newNodes = [];
+  for (let i = 0; i < nodes.length; i++) {
+    if (usedSet.has(i)) {
+      indexMap[i] = newNodes.length;
+      newNodes.push(nodes[i]);
+    } else {
+      indexMap[i] = -1;
+    }
+  }
+
+  // Update all line references to use the new compacted indices.
+  // startNode can be -1 (no node), so skip remapping in that case.
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startNode !== -1) {
+      lines[i].startNode = indexMap[lines[i].startNode];
+    }
+    lines[i].endNode = indexMap[lines[i].endNode];
+  }
+
+  nodes = newNodes;
+}
+
+// ============================================================
+// Drawing state.
+// ============================================================
 let isDrawing = false;
 let isPanning = false;
 
-// Start positions in world space (for drawing lines).
+// The node index the new line starts from (-1 if starting fresh).
+let startNodeIndex = -1;
+
+// Start world position (used when not snapping to an existing node).
 let startWorldX = 0;
 let startWorldY = 0;
 
@@ -177,10 +304,9 @@ let lastPanScreenY = 0;
 let hasDragged = false;
 
 // ============================================================
-// Redraw all lines from the lines array.
+// Redraw everything: lines, nodes, and selection highlight.
 // Clears the entire canvas first, then applies the camera
-// transform and draws each stored line in world space.
-// The selected line is drawn in red so the user can see it.
+// transform and draws in world space.
 // ============================================================
 function redrawCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -194,12 +320,18 @@ function redrawCanvas() {
     camera.panY * camera.zoom
   );
 
+  // --- Draw lines ---
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
+    // Start position: use the node if snapped, otherwise raw coords.
+    const sx = (line.startNode !== -1) ? nodes[line.startNode].x : line.startX;
+    const sy = (line.startNode !== -1) ? nodes[line.startNode].y : line.startY;
+    const endNode = nodes[line.endNode];
+
     ctx.beginPath();
-    ctx.moveTo(line.x1, line.y1);
-    ctx.lineTo(line.x2, line.y2);
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(endNode.x, endNode.y);
 
     // Highlight the selected line in red, all others in black.
     // Divide lineWidth by zoom so strokes appear the same thickness
@@ -215,16 +347,42 @@ function redrawCanvas() {
     ctx.stroke();
   }
 
+  // --- Draw regular nodes ---
+  // Node radius is in screen pixels, so divide by zoom for world space.
+  const nodeWorldRadius = CONFIG.nodeRadius / camera.zoom;
+  ctx.fillStyle = CONFIG.nodeColor;
+
+  for (let i = 0; i < nodes.length; i++) {
+    if (i === NEXUS_INDEX) continue; // Nexus is drawn separately below.
+    ctx.beginPath();
+    ctx.arc(nodes[i].x, nodes[i].y, nodeWorldRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // --- Draw the Nexus node ---
+  // Drawn last so it renders on top of everything else.
+  const nexusWorldRadius = CONFIG.nexusRadius / camera.zoom;
+  ctx.fillStyle = CONFIG.nexusColor;
+  ctx.beginPath();
+  ctx.arc(nodes[NEXUS_INDEX].x, nodes[NEXUS_INDEX].y, nexusWorldRadius, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.restore();
 }
 
 // ============================================================
 // Calculate the shortest distance from a point (px, py) to a
-// line segment defined by (x1, y1) -> (x2, y2).
+// line segment defined by a line object (which may have a node
+// or raw coordinates for its start).
 // All coordinates are in world space.
 // Used to detect if a click is close enough to select a line.
 // ============================================================
-function distanceToLine(px, py, x1, y1, x2, y2) {
+function distanceToLine(px, py, line) {
+  const x1 = (line.startNode !== -1) ? nodes[line.startNode].x : line.startX;
+  const y1 = (line.startNode !== -1) ? nodes[line.startNode].y : line.startY;
+  const x2 = nodes[line.endNode].x;
+  const y2 = nodes[line.endNode].y;
+
   const dx = x2 - x1;
   const dy = y2 - y1;
   const lengthSquared = dx * dx + dy * dy;
@@ -260,7 +418,8 @@ function getCanvasPos(event) {
 // ============================================================
 // MOUSE DOWN — start drawing a new line, or start panning.
 // Middle mouse button (button 1) or left + shift starts a pan.
-// Left mouse button starts drawing.
+// Left mouse button starts drawing. If the click is near an
+// existing node, the new line snaps to that node.
 // ============================================================
 canvas.addEventListener("mousedown", function(event) {
   // Focus the canvas so it can receive keyboard events (e.g. Delete/Backspace).
@@ -284,8 +443,19 @@ canvas.addEventListener("mousedown", function(event) {
   if (event.button === 0) {
     isDrawing = true;
     const world = screenToWorld(sx, sy);
-    startWorldX = world.x;
-    startWorldY = world.y;
+
+    // Check if we're near an existing node — snap to it.
+    startNodeIndex = findNearestNode(world.x, world.y, CONFIG.nodeSnapRadius);
+
+    if (startNodeIndex !== -1) {
+      // Snap: use the existing node's position as the start.
+      startWorldX = nodes[startNodeIndex].x;
+      startWorldY = nodes[startNodeIndex].y;
+    } else {
+      // No snap: use the raw click position.
+      startWorldX = world.x;
+      startWorldY = world.y;
+    }
   }
 });
 
@@ -320,15 +490,27 @@ canvas.addEventListener("mousemove", function(event) {
 
   hasDragged = true;
 
-  // Redraw all existing lines, then draw the preview line on top.
+  // Redraw all existing lines and nodes, then draw the preview line on top.
   redrawCanvas();
 
-  // Draw the preview line in screen space (outside the camera transform)
-  // by converting world start to screen and using current screen pos.
+  // Check if the cursor is near an existing node for a snap preview.
+  const world = screenToWorld(sx, sy);
+  const snapIdx = findNearestNode(world.x, world.y, CONFIG.nodeSnapRadius);
+  let endScreenX = sx;
+  let endScreenY = sy;
+
+  // If snapping, draw the preview line to the snapped node position.
+  if (snapIdx !== -1) {
+    const snapped = worldToScreen(nodes[snapIdx].x, nodes[snapIdx].y);
+    endScreenX = snapped.x;
+    endScreenY = snapped.y;
+  }
+
+  // Draw the preview line in screen space (outside the camera transform).
   const startScreen = worldToScreen(startWorldX, startWorldY);
   ctx.beginPath();
   ctx.moveTo(startScreen.x, startScreen.y);
-  ctx.lineTo(sx, sy);
+  ctx.lineTo(endScreenX, endScreenY);
   ctx.strokeStyle = CONFIG.previewStrokeColor;
   ctx.lineWidth = CONFIG.defaultLineWidth;
   ctx.stroke();
@@ -337,7 +519,8 @@ canvas.addEventListener("mousemove", function(event) {
 // ============================================================
 // MOUSE UP — finish drawing, finish panning, or select a line.
 // If the mouse didn't move (click without drag), try to select
-// a line near the click point. Otherwise, save the new line.
+// a line near the click point. Otherwise, save the new line
+// with nodes at both endpoints (snapping where applicable).
 // ============================================================
 canvas.addEventListener("mouseup", function(event) {
   // End panning.
@@ -361,7 +544,7 @@ canvas.addEventListener("mouseup", function(event) {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const dist = distanceToLine(world.x, world.y, line.x1, line.y1, line.x2, line.y2);
+      const dist = distanceToLine(world.x, world.y, line);
 
       if (dist < closestDist) {
         closestDist = dist;
@@ -380,8 +563,23 @@ canvas.addEventListener("mouseup", function(event) {
     return;
   }
 
-  // User dragged — save the new line in world coordinates.
-  lines.push({ x1: startWorldX, y1: startWorldY, x2: world.x, y2: world.y });
+  // User dragged — create the line.
+  // A node is created only at the END of the line (or reused if snapping).
+  // The start reuses an existing node if snapped, otherwise stores raw coords.
+  const eNode = getOrCreateNode(world.x, world.y);
+
+  // Don't create a line from a node to itself.
+  if (startNodeIndex !== -1 && startNodeIndex === eNode) {
+    redrawCanvas();
+    return;
+  }
+
+  lines.push({
+    startNode: startNodeIndex,   // -1 if not snapped, or an existing node index.
+    startX: startWorldX,         // Raw start position (used when startNode is -1).
+    startY: startWorldY,
+    endNode: eNode,
+  });
 
   // Deselect any previously selected line when drawing a new one.
   selectedLineIndex = -1;
@@ -407,6 +605,8 @@ canvas.addEventListener("wheel", function(event) {
 
 // ============================================================
 // KEYBOARD — press Delete or Backspace to remove selected line.
+// Removes the line, then garbage-collects any orphaned nodes
+// (nodes no longer connected to any line).
 // Scoped to the canvas element so it only fires when the canvas
 // has focus. This prevents conflicts with browser navigation
 // (e.g. Backspace triggering browser back). The canvas receives
@@ -423,14 +623,17 @@ canvas.addEventListener("keydown", function(event) {
     lines.splice(selectedLineIndex, 1);
     selectedLineIndex = -1;
 
+    // Clean up nodes that are no longer connected to any line.
+    removeOrphanedNodes();
+
     redrawCanvas();
   }
 });
 
 // ============================================================
-// Initial setup: size the canvas and draw.
+// Initial setup: size the canvas, center on the Nexus, and draw.
 // ============================================================
 resizeCanvas();
-updateZoomDisplay();
+centerOnNexus();
 
 })();

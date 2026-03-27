@@ -43,7 +43,8 @@
   background: #e0e0e0;
 }
 
-#zoom-reset-btn {
+#zoom-reset-btn,
+#recenter-btn {
   width: auto !important;
   padding: 0 10px;
   font-size: 13px !important;
