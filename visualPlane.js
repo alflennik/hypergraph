@@ -1,5 +1,12 @@
+// ============================================================
+// Wrap the entire script in an IIFE (Immediately Invoked Function
+// Expression) so we can use early return to bail out if the
+// canvas context is unavailable.
+// ============================================================
+(function() {
+
 const canvas = document.getElementById("plane-1");
-let ctx = "";
+let ctx = null;
 let isDrawing = false;
 let startX = 0;
 let startY = 0;
@@ -18,6 +25,10 @@ if (canvas.getContext) {
 } else {
   alert("Your browser does not support the canvas element.");
 }
+
+// Guard: stop here if the canvas context is not available.
+// Without a valid context, none of the drawing or event code will work.
+if (!ctx) return;
 
 // ============================================================
 // Redraw all lines from the lines array.
@@ -182,3 +193,5 @@ canvas.addEventListener("keydown", function(event) {
     redrawCanvas();
   }
 });
+
+})();

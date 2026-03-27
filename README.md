@@ -1,1 +1,1 @@
-# Visualizartion Plan for Hyper Grapsh
+# Visualizartion Plane for Hyper Grapsh
