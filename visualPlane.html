@@ -8,9 +8,25 @@
 </head>
 <body>
   <h1 id="header">Visualization Plane</h1>
-  <canvas id="plane-1" width="500" height="500" tabindex="0">
-    Visualization Plane
-  </canvas>
+
+  <!-- Wrapper holds the zoom toolbar and the canvas together. -->
+  <div id="canvas-wrapper">
+
+    <!-- Zoom controls sit above the canvas. -->
+    <div id="zoom-toolbar">
+      <button id="zoom-in-btn" title="Zoom In">+</button>
+      <span id="zoom-level">100%</span>
+      <button id="zoom-out-btn" title="Zoom Out">&minus;</button>
+      <button id="zoom-reset-btn" title="Reset Zoom">Reset</button>
+      <span id="toolbar-hint">Scroll to zoom &middot; Shift + drag to pan</span>
+    </div>
+
+    <!-- Canvas is sized dynamically via CSS and JS. tabindex allows keyboard events. -->
+    <canvas id="plane-1" tabindex="0">
+      Visualization Plane
+    </canvas>
+  </div>
+
   <script src="visualPlane.js"></script>
 </body>
 </html>
