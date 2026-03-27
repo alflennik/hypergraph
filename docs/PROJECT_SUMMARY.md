@@ -1,6 +1,6 @@
 # Hyper Visual — Project Summary
 
-> **Last updated:** 2026-03-27
+> **Last updated:** 2026-03-27 (v2 — updated node/line model, functions, data flow)
 
 > **Living document.** This file should be reviewed and updated (if necessary)
 > by the AI agent after every use of the **context-loading-strategy** skill.
@@ -11,10 +11,12 @@
 
 ## Project Overview
 
-A browser-based interactive drawing canvas for line segments. Users drag to
-draw lines, click (without dragging) to select the nearest line within a pixel
-threshold, and press Delete/Backspace to remove the selected line. Selected
-lines render in red with a thicker stroke. The canvas is pannable and zoomable.
+A browser-based interactive "visualization plane" for drawing line segments on
+an infinite 2D canvas with pan and zoom. Lines snap to nodes — reusable graph
+vertices that appear when endpoints land near each other. A permanent green
+"Nexus" node sits at the origin. Users drag to draw, click to select the
+nearest line, and press Delete/Backspace to remove the selected line. Selected
+lines render in red with a thicker stroke.
 
 - **Tech stack:** Plain HTML5, CSS, and vanilla JavaScript (no frameworks,
   no bundler, no npm dependencies).
@@ -28,8 +30,8 @@ Flat layout — code files at the project root, documentation in `docs/`.
 |------|---------|
 | `visualPlane.html` | Page shell. Loads CSS and JS, defines the canvas (`#plane-1`, `tabindex="0"`), heading, and zoom toolbar inside `#canvas-wrapper`. |
 | `visualPlane.css` | Responsive layout (85vw x 85vh canvas wrapper), zoom toolbar styles, canvas styling. |
-| `visualPlane.js` | All application logic: camera/pan/zoom system, state management, drawing, hit-testing, keyboard handling. (~300 lines, wrapped in an IIFE.) |
-| `README.md` | Single-line title (contains typos — "Visualizartion Plane for Hyper Grapsh"). |
+| `visualPlane.js` | All application logic: camera/pan/zoom, node/line graph model, Nexus, snapping, drawing, hit-testing, orphan cleanup, keyboard handling. (~640 lines, wrapped in an IIFE.) |
+| `README.md` | Single-line title — "Visualization Plane for Hyper Graph". |
 | `.gitignore` | Ignores `issues.txt` and `fixed-issues.md` from version control. |
 | `docs/PROJECT_SUMMARY.md` | This file. |
 | `docs/issues.txt` | Tracks open and fixed issues with severity buckets. |
@@ -42,29 +44,32 @@ Flat layout — code files at the project root, documentation in `docs/`.
 - **Camera system:** A `camera` object holds `panX`, `panY` (world-unit
   offsets) and `zoom` (multiplier). `screenToWorld()` and `worldToScreen()`
   convert between coordinate spaces. All line data is stored in world space.
-- **State:** An in-memory `lines` array stores all drawn segments as
-  `{ x1, y1, x2, y2 }` objects in world coordinates. `selectedLineIndex`
-  tracks which line (if any) is selected. No persistence, no network calls.
+- **State:** Two in-memory arrays form a graph model:
+  - `nodes[]` — `{ x, y }` positions in world space. `nodes[0]` is the
+    permanent green "Nexus" at the origin (`NEXUS_INDEX = 0`).
+  - `lines[]` — `{ startNode, endNode, startX, startY }` where `endNode`
+    is always a node index. `startNode` can be `-1` if the start is in
+    free space (with raw coords in `startX`/`startY`).
+  - `selectedLineIndex` tracks which line (if any) is selected.
+  - No persistence, no network calls.
 - **Flow:**
-  1. `mousedown` — stores start coordinates in both screen and world space.
-     Shift+click or middle-click starts panning instead of drawing.
+  1. `mousedown` — stores start coordinates. Snaps the start to the nearest
+     node via `findNearestNode()`. Shift+click or middle-click starts panning.
   2. `mousemove` — while drawing, if movement exceeds `CONFIG.dragThreshold`
-     (15px screen), sets `hasDragged = true`, redraws all lines plus a live
-     preview. While panning, adjusts `camera.panX`/`panY`.
-  3. `mouseup` — if the user dragged, commits the new line to `lines` in
-     world coordinates. If clicked without dragging, runs hit-test to
-     select/deselect the nearest line (within `CONFIG.clickThreshold` — 8px,
-     adjusted for zoom level).
-  4. `wheel` — zooms in/out at the mouse cursor position using
-     `zoomAtPoint()`, which adjusts pan so the world point under the cursor
-     stays fixed on screen.
-  5. `keydown` (scoped to canvas) — Delete/Backspace removes the selected
-     line from `lines` via splice.
-  6. `redrawCanvas()` — clears the canvas, applies the camera transform via
-     `ctx.setTransform()`, and redraws all lines. Line widths are divided by
-     zoom so strokes appear consistent on screen.
-  7. `resizeCanvas()` — syncs the canvas drawing buffer to its CSS layout
-     size. Called on load and on window resize.
+     (15px screen), sets `hasDragged = true`, redraws plus a live preview.
+     While panning, adjusts `camera.panX`/`panY`.
+  3. `mouseup` — if dragged, `getOrCreateNode()` finds or creates the end
+     node, self-loop prevention blocks same-node connections, then pushes
+     a new line. If clicked without dragging, runs hit-test to
+     select/deselect the nearest line (within `CONFIG.clickThreshold` — 8px).
+  4. `wheel` — zooms at cursor via `zoomAtPoint()`.
+  5. `keydown` (scoped to canvas) — Delete/Backspace splices the selected
+     line and calls `removeOrphanedNodes()` to clean up unused non-Nexus nodes.
+  6. `redrawCanvas()` — clears canvas, applies camera transform via
+     `ctx.setTransform()`, draws all segments and nodes. Nexus drawn last
+     (on top). Line widths divided by zoom for consistent screen thickness.
+  7. `resizeCanvas()` — syncs canvas drawing buffer to CSS layout size.
+     Called on load and on window resize.
 
 ## Key Functions (visualPlane.js)
 
@@ -75,10 +80,15 @@ Flat layout — code files at the project root, documentation in `docs/`.
 | `worldToScreen(wx, wy)` | Converts world-space coordinates to screen-space using the current camera. |
 | `zoomAtPoint(newZoom, sx, sy)` | Applies zoom while keeping the world point under (sx, sy) fixed on screen. |
 | `updateZoomDisplay()` | Updates the zoom percentage label in the toolbar. |
-| `redrawCanvas()` | Clears canvas, applies camera transform, redraws all segments with selection highlighting. |
+| `centerOnNexus()` | Resets camera pan/zoom so the Nexus node is centered on screen. |
+| `findNearestNode(wx, wy)` | Returns the index of the nearest node within snap radius, or `-1`. |
+| `getOrCreateNode(wx, wy)` | Returns an existing node index if within snap radius, or creates a new one. |
+| `isNodeUsed(index)` | Checks whether any line references the given node index. |
+| `removeOrphanedNodes()` | Removes unused non-Nexus nodes and remaps line references. |
+| `redrawCanvas()` | Clears canvas, applies camera transform, redraws all segments and nodes (Nexus on top). |
 | `distanceToLine(px, py, ...)` | Shortest distance from a point to a line segment (world space). |
 | `getCanvasPos(event)` | Returns screen-space mouse position relative to the canvas. |
-| Event handlers | `mousedown`, `mousemove`, `mouseup`, `wheel`, `keydown` on canvas; `click` on zoom buttons. |
+| Event handlers | `mousedown`, `mousemove`, `mouseup`, `wheel`, `keydown` on canvas; `click` on zoom/recenter buttons. |
 
 ## Key Patterns & Conventions
 
@@ -99,11 +109,10 @@ Flat layout — code files at the project root, documentation in `docs/`.
 ## Known Issues
 
 - **1 open Low issue (from `docs/issues.txt`):** No persistence — the
-  `lines` array lives only in memory. Refreshing the page clears all
-  drawings. Suggested fix: localStorage or file export/import.
+  `nodes`/`lines` arrays live only in memory. Refreshing the page clears
+  all drawings. Suggested fix: localStorage or file export/import.
 - **Doc drift:** `docs/fixed-issues.md` still says `dragThreshold` is 3px;
-  the current code uses 15px. `README.md` has typos that don't match the
-  HTML page title.
+  the current code uses `CONFIG.dragThreshold = 15`.
 
 ## Possible Extensions
 
