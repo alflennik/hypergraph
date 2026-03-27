@@ -5,6 +5,19 @@
 // ============================================================
 (function() {
 
+// ============================================================
+// Configuration — all tunable values in one place.
+// Adjust these instead of hunting for hardcoded numbers.
+// ============================================================
+const CONFIG = {
+  defaultStrokeColor: "black",   // Color for normal (unselected) lines.
+  selectedStrokeColor: "red",    // Color for the currently selected line.
+  defaultLineWidth: 1,           // Stroke width for normal lines (px).
+  selectedLineWidth: 3,          // Stroke width for the selected line (px).
+  clickThreshold: 8,             // Max distance (px) from a line to count as a click on it.
+  dragThreshold: 15,             // Min distance (px) mouse must move to count as a drag.
+};
+
 const canvas = document.getElementById("plane-1");
 let ctx = null;
 let isDrawing = false;
@@ -47,19 +60,19 @@ function redrawCanvas() {
 
     // Highlight the selected line in red, all others in black.
     if (i === selectedLineIndex) {
-      ctx.strokeStyle = "red";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = CONFIG.selectedStrokeColor;
+      ctx.lineWidth = CONFIG.selectedLineWidth;
     } else {
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = CONFIG.defaultStrokeColor;
+      ctx.lineWidth = CONFIG.defaultLineWidth;
     }
 
     ctx.stroke();
   }
 
   // Reset stroke style back to default after drawing.
-  ctx.strokeStyle = "black";
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = CONFIG.defaultStrokeColor;
+  ctx.lineWidth = CONFIG.defaultLineWidth;
 }
 
 // ============================================================
@@ -109,11 +122,19 @@ canvas.addEventListener("mousedown", function(event) {
 canvas.addEventListener("mousemove", function(event) {
   if (!isDrawing) return;
 
-  hasDragged = true;
-
   const rect = canvas.getBoundingClientRect();
   const currentX = event.clientX - rect.left;
   const currentY = event.clientY - rect.top;
+
+  // Only count as a drag if the mouse moved past the threshold from the start.
+  // This prevents tiny accidental jitter during a click from committing
+  // an unintended short line segment.
+  const dragThreshold = CONFIG.dragThreshold;
+  const dx = currentX - startX;
+  const dy = currentY - startY;
+  if (!hasDragged && Math.sqrt(dx * dx + dy * dy) < dragThreshold) return;
+
+  hasDragged = true;
 
   // Redraw all existing lines, then draw the preview line on top.
   redrawCanvas();
@@ -138,7 +159,7 @@ canvas.addEventListener("mouseup", function(event) {
 
   if (!hasDragged) {
     // User clicked without dragging — try to select a line.
-    const clickThreshold = 8; // Max pixel distance to count as "on the line".
+    const clickThreshold = CONFIG.clickThreshold;
     let closestIndex = -1;
     let closestDist = Infinity;
 
