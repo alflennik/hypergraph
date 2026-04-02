@@ -1,1 +1,1 @@
-# HYPER GRAPH
+# Visualization Plane for Hyper Graph

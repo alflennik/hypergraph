@@ -1,33 +1,639 @@
+// ============================================================
+// Wrap the entire script in an IIFE (Immediately Invoked Function
+// Expression) so we can use early return to bail out if the
+// canvas context is unavailable.
+// ============================================================
+(function() {
+
+// ============================================================
+// Configuration — all tunable values in one place.
+// Adjust these instead of hunting for hardcoded numbers.
+// ============================================================
+const CONFIG = {
+  defaultStrokeColor: "black",   // Color for normal (unselected) lines.
+  selectedStrokeColor: "red",    // Color for the currently selected line.
+  previewStrokeColor: "black",   // Color for the live preview line while dragging.
+  defaultLineWidth: 1,           // Stroke width for normal lines (px).
+  selectedLineWidth: 3,          // Stroke width for the selected line (px).
+  clickThreshold: 8,             // Max distance (px) from a line to count as a click on it.
+  dragThreshold: 15,             // Min distance (px) mouse must move to count as a drag.
+
+  // Node settings.
+  nodeRadius: 6,                 // Radius of regular node circles (screen px).
+  nodeColor: "blue",             // Fill color for regular nodes.
+  nodeSnapRadius: 12,            // Max distance (screen px) to snap to an existing node.
+
+  // Nexus node — the permanent, undeletable center node.
+  nexusRadius: 15,               // Radius of the Nexus node (screen px).
+  nexusColor: "green",           // Fill color for the Nexus node.
+
+  // Zoom settings.
+  minZoom: 0.1,                  // Minimum zoom level (10%).
+  maxZoom: 10,                   // Maximum zoom level (1000%).
+  zoomStep: 0.15,               // How much each zoom button click changes the zoom (15%).
+  wheelZoomStep: 0.1,           // How much each scroll tick changes the zoom (10%).
+};
+
+// ============================================================
+// Canvas setup — size the canvas to match its CSS layout size.
+// ============================================================
 const canvas = document.getElementById("plane-1");
-let ctx = "";
-let isDrawing = false;
+let ctx = null;
 
 if (canvas.getContext) {
   ctx = canvas.getContext("2d");
-
 } else {
   alert("Your browser does not support the canvas element.");
 }
 
-canvas.addEventListener("mousedown", function(event) {
-  isDrawing = true;
+// Guard: stop here if the canvas context is not available.
+// Without a valid context, none of the drawing or event code will work.
+if (!ctx) return;
 
-  const rect = canvas.getBoundingClientRect();
-  ctx.beginPath();
-  ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
+// ============================================================
+// Resize the canvas drawing buffer to match its displayed size.
+// Called once on load and whenever the window resizes.
+// This keeps the canvas crisp at any viewport size.
+// ============================================================
+function resizeCanvas() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  redrawCanvas();
+}
+
+window.addEventListener("resize", resizeCanvas);
+
+// ============================================================
+// Camera — tracks the current pan and zoom state.
+//
+// World coordinates: the "infinite" plane where lines live.
+// Screen coordinates: pixels on the visible canvas element.
+//
+// Conversion formulas:
+//   screenX = (worldX + panX) * zoom
+//   screenY = (worldY + panY) * zoom
+//   worldX  = screenX / zoom - panX
+//   worldY  = screenY / zoom - panY
+// ============================================================
+let camera = {
+  panX: 0,    // Horizontal pan offset (world units).
+  panY: 0,    // Vertical pan offset (world units).
+  zoom: 1,    // Zoom multiplier (1 = 100%).
+};
+
+// Convert a screen-space point to world-space.
+function screenToWorld(sx, sy) {
+  return {
+    x: sx / camera.zoom - camera.panX,
+    y: sy / camera.zoom - camera.panY,
+  };
+}
+
+// Convert a world-space point to screen-space.
+function worldToScreen(wx, wy) {
+  return {
+    x: (wx + camera.panX) * camera.zoom,
+    y: (wy + camera.panY) * camera.zoom,
+  };
+}
+
+// ============================================================
+// Zoom at a specific screen point. Adjusts the pan so that the
+// world point under the cursor stays in the same screen position
+// after the zoom changes. This is the "zoom toward mouse" effect.
+// ============================================================
+function zoomAtPoint(newZoom, screenX, screenY) {
+  // Clamp the new zoom to the configured range.
+  newZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, newZoom));
+
+  // Find the world point currently under the cursor.
+  const worldBefore = screenToWorld(screenX, screenY);
+
+  // Apply the new zoom level.
+  camera.zoom = newZoom;
+
+  // After zoom changed, the same screen point now maps to a different
+  // world point. Adjust panX/panY so it maps back to the original.
+  const worldAfter = screenToWorld(screenX, screenY);
+  camera.panX += (worldAfter.x - worldBefore.x);
+  camera.panY += (worldAfter.y - worldBefore.y);
+
+  updateZoomDisplay();
+  redrawCanvas();
+}
+
+// ============================================================
+// Zoom display — update the percentage label in the toolbar.
+// ============================================================
+const zoomLevelSpan = document.getElementById("zoom-level");
+
+function updateZoomDisplay() {
+  zoomLevelSpan.textContent = Math.round(camera.zoom * 100) + "%";
+}
+
+// ============================================================
+// Zoom toolbar buttons.
+// Zoom in/out focus on the center of the canvas since there is
+// no specific mouse position when clicking a button.
+// ============================================================
+document.getElementById("zoom-in-btn").addEventListener("click", function() {
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  zoomAtPoint(camera.zoom * (1 + CONFIG.zoomStep), cx, cy);
 });
 
+document.getElementById("zoom-out-btn").addEventListener("click", function() {
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  zoomAtPoint(camera.zoom * (1 - CONFIG.zoomStep), cx, cy);
+});
+
+document.getElementById("zoom-reset-btn").addEventListener("click", function() {
+  centerOnNexus();
+});
+
+// ============================================================
+// Recenter button — pans and zooms to center the Nexus node.
+// ============================================================
+document.getElementById("recenter-btn").addEventListener("click", function() {
+  centerOnNexus();
+});
+
+// Center the view on the Nexus node (world origin) and reset zoom to 100%.
+// Pan is set so that world (0,0) maps to the center of the canvas.
+function centerOnNexus() {
+  camera.zoom = 1;
+  camera.panX = canvas.width / 2;
+  camera.panY = canvas.height / 2;
+  updateZoomDisplay();
+  redrawCanvas();
+}
+
+// ============================================================
+// Graph data model — nodes and lines.
+//
+// nodes[]: Array of { x, y } objects in world coordinates.
+//          Nodes are created only at the END of a drawn line.
+//          They serve as visible snap targets for future lines.
+//
+// lines[]: Array of { startNode, endNode, startX, startY } objects.
+//          endNode is always an index into nodes[].
+//          startNode is a node index if the line snapped to an
+//          existing node, or -1 if the line started from empty
+//          space (in which case startX/startY hold the raw position).
+//
+// This lets lines share endpoints via nodes. Deleting a line
+// removes only that edge. Orphaned nodes (nodes with no remaining
+// lines referencing them) are garbage-collected automatically.
+// ============================================================
+let nodes = [];
+let lines = [];
+
+// The Nexus node is always nodes[0]. It sits at the world origin (0, 0),
+// is always visible, and can never be deleted.
+const NEXUS_INDEX = 0;
+nodes.push({ x: 0, y: 0 });
+
+// Index of the currently selected line (-1 means nothing selected).
+let selectedLineIndex = -1;
+
+// ============================================================
+// Node helpers.
+// ============================================================
+
+// Find the nearest node to a world-space point within a maximum
+// screen-pixel radius. Returns the node index or -1 if none found.
+function findNearestNode(worldX, worldY, maxScreenPx) {
+  const maxWorldDist = maxScreenPx / camera.zoom;
+  let bestIndex = -1;
+  let bestDist = Infinity;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const dx = nodes[i].x - worldX;
+    const dy = nodes[i].y - worldY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < bestDist && dist <= maxWorldDist) {
+      bestDist = dist;
+      bestIndex = i;
+    }
+  }
+
+  return bestIndex;
+}
+
+// Get or create a node at a world position. If an existing node
+// is within snap radius, reuse it. Otherwise, create a new one.
+// Returns the node index.
+function getOrCreateNode(worldX, worldY) {
+  const existing = findNearestNode(worldX, worldY, CONFIG.nodeSnapRadius);
+  if (existing !== -1) return existing;
+
+  nodes.push({ x: worldX, y: worldY });
+  return nodes.length - 1;
+}
+
+// Check if a node is referenced by any line.
+function isNodeUsed(nodeIndex) {
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startNode === nodeIndex || lines[i].endNode === nodeIndex) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Remove orphaned nodes (not referenced by any line) and update
+// all line indices to reflect the compacted nodes array.
+// The Nexus node (index 0) is never removed regardless of usage.
+function removeOrphanedNodes() {
+  // Build a set of all node indices currently in use.
+  // Always include the Nexus so it survives cleanup.
+  const usedSet = new Set();
+  usedSet.add(NEXUS_INDEX);
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startNode !== -1) usedSet.add(lines[i].startNode);
+    usedSet.add(lines[i].endNode);
+  }
+
+  // Build an index mapping: oldIndex -> newIndex (or -1 if removed).
+  const indexMap = new Array(nodes.length);
+  const newNodes = [];
+  for (let i = 0; i < nodes.length; i++) {
+    if (usedSet.has(i)) {
+      indexMap[i] = newNodes.length;
+      newNodes.push(nodes[i]);
+    } else {
+      indexMap[i] = -1;
+    }
+  }
+
+  // Update all line references to use the new compacted indices.
+  // startNode can be -1 (no node), so skip remapping in that case.
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startNode !== -1) {
+      lines[i].startNode = indexMap[lines[i].startNode];
+    }
+    lines[i].endNode = indexMap[lines[i].endNode];
+  }
+
+  nodes = newNodes;
+}
+
+// ============================================================
+// Drawing state.
+// ============================================================
+let isDrawing = false;
+let isPanning = false;
+
+// The node index the new line starts from (-1 if starting fresh).
+let startNodeIndex = -1;
+
+// Start world position (used when not snapping to an existing node).
+let startWorldX = 0;
+let startWorldY = 0;
+
+// Start positions in screen space (for pan and drag threshold).
+let startScreenX = 0;
+let startScreenY = 0;
+
+// Last screen position during a pan drag.
+let lastPanScreenX = 0;
+let lastPanScreenY = 0;
+
+// Track whether the mouse moved during a mousedown (to distinguish click vs drag).
+let hasDragged = false;
+
+// ============================================================
+// Redraw everything: lines, nodes, and selection highlight.
+// Clears the entire canvas first, then applies the camera
+// transform and draws in world space.
+// ============================================================
+function redrawCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Apply the camera transform: scale then translate.
+  ctx.save();
+  ctx.setTransform(
+    camera.zoom, 0,
+    0, camera.zoom,
+    camera.panX * camera.zoom,
+    camera.panY * camera.zoom
+  );
+
+  // --- Draw lines ---
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Start position: use the node if snapped, otherwise raw coords.
+    const sx = (line.startNode !== -1) ? nodes[line.startNode].x : line.startX;
+    const sy = (line.startNode !== -1) ? nodes[line.startNode].y : line.startY;
+    const endNode = nodes[line.endNode];
+
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(endNode.x, endNode.y);
+
+    // Highlight the selected line in red, all others in black.
+    // Divide lineWidth by zoom so strokes appear the same thickness
+    // on screen regardless of zoom level.
+    if (i === selectedLineIndex) {
+      ctx.strokeStyle = CONFIG.selectedStrokeColor;
+      ctx.lineWidth = CONFIG.selectedLineWidth / camera.zoom;
+    } else {
+      ctx.strokeStyle = CONFIG.defaultStrokeColor;
+      ctx.lineWidth = CONFIG.defaultLineWidth / camera.zoom;
+    }
+
+    ctx.stroke();
+  }
+
+  // --- Draw regular nodes ---
+  // Node radius is in screen pixels, so divide by zoom for world space.
+  const nodeWorldRadius = CONFIG.nodeRadius / camera.zoom;
+  ctx.fillStyle = CONFIG.nodeColor;
+
+  for (let i = 0; i < nodes.length; i++) {
+    if (i === NEXUS_INDEX) continue; // Nexus is drawn separately below.
+    ctx.beginPath();
+    ctx.arc(nodes[i].x, nodes[i].y, nodeWorldRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // --- Draw the Nexus node ---
+  // Drawn last so it renders on top of everything else.
+  const nexusWorldRadius = CONFIG.nexusRadius / camera.zoom;
+  ctx.fillStyle = CONFIG.nexusColor;
+  ctx.beginPath();
+  ctx.arc(nodes[NEXUS_INDEX].x, nodes[NEXUS_INDEX].y, nexusWorldRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ============================================================
+// Calculate the shortest distance from a point (px, py) to a
+// line segment defined by a line object (which may have a node
+// or raw coordinates for its start).
+// All coordinates are in world space.
+// Used to detect if a click is close enough to select a line.
+// ============================================================
+function distanceToLine(px, py, line) {
+  const x1 = (line.startNode !== -1) ? nodes[line.startNode].x : line.startX;
+  const y1 = (line.startNode !== -1) ? nodes[line.startNode].y : line.startY;
+  const x2 = nodes[line.endNode].x;
+  const y2 = nodes[line.endNode].y;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lengthSquared = dx * dx + dy * dy;
+
+  // If the line has zero length, just return distance to the point.
+  if (lengthSquared === 0) {
+    return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+  }
+
+  // Project point onto the line segment, clamped between 0 and 1.
+  let t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared;
+  t = Math.max(0, Math.min(1, t));
+
+  // Find the closest point on the segment.
+  const closestX = x1 + t * dx;
+  const closestY = y1 + t * dy;
+
+  return Math.sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
+}
+
+// ============================================================
+// Helper: get the screen-space mouse position relative to the
+// canvas from a mouse event.
+// ============================================================
+function getCanvasPos(event) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    sx: event.clientX - rect.left,
+    sy: event.clientY - rect.top,
+  };
+}
+
+// ============================================================
+// MOUSE DOWN — start drawing a new line, or start panning.
+// Middle mouse button (button 1) or left + shift starts a pan.
+// Left mouse button starts drawing. If the click is near an
+// existing node, the new line snaps to that node.
+// ============================================================
+canvas.addEventListener("mousedown", function(event) {
+  // Focus the canvas so it can receive keyboard events (e.g. Delete/Backspace).
+  canvas.focus();
+
+  const { sx, sy } = getCanvasPos(event);
+  startScreenX = sx;
+  startScreenY = sy;
+  hasDragged = false;
+
+  // Middle-click or shift+left-click starts panning.
+  if (event.button === 1 || (event.button === 0 && event.shiftKey)) {
+    isPanning = true;
+    lastPanScreenX = sx;
+    lastPanScreenY = sy;
+    event.preventDefault();
+    return;
+  }
+
+  // Left-click starts drawing a line.
+  if (event.button === 0) {
+    isDrawing = true;
+    const world = screenToWorld(sx, sy);
+
+    // Check if we're near an existing node — snap to it.
+    startNodeIndex = findNearestNode(world.x, world.y, CONFIG.nodeSnapRadius);
+
+    if (startNodeIndex !== -1) {
+      // Snap: use the existing node's position as the start.
+      startWorldX = nodes[startNodeIndex].x;
+      startWorldY = nodes[startNodeIndex].y;
+    } else {
+      // No snap: use the raw click position.
+      startWorldX = world.x;
+      startWorldY = world.y;
+    }
+  }
+});
+
+// ============================================================
+// MOUSE MOVE — show a live preview of the line being drawn,
+// or update the pan position.
+// ============================================================
 canvas.addEventListener("mousemove", function(event) {
+  const { sx, sy } = getCanvasPos(event);
+
+  // Handle panning.
+  if (isPanning) {
+    // Pan offset is in world units, so divide screen delta by zoom.
+    const dx = (sx - lastPanScreenX) / camera.zoom;
+    const dy = (sy - lastPanScreenY) / camera.zoom;
+    camera.panX += dx;
+    camera.panY += dy;
+    lastPanScreenX = sx;
+    lastPanScreenY = sy;
+    redrawCanvas();
+    return;
+  }
+
   if (!isDrawing) return;
 
-  const rect = canvas.getBoundingClientRect();
-  ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
+  // Only count as a drag if the mouse moved past the threshold from the start.
+  // This prevents tiny accidental jitter during a click from committing
+  // an unintended short line segment. Threshold is in screen pixels.
+  const dxScreen = sx - startScreenX;
+  const dyScreen = sy - startScreenY;
+  if (!hasDragged && Math.sqrt(dxScreen * dxScreen + dyScreen * dyScreen) < CONFIG.dragThreshold) return;
+
+  hasDragged = true;
+
+  // Redraw all existing lines and nodes, then draw the preview line on top.
+  redrawCanvas();
+
+  // Check if the cursor is near an existing node for a snap preview.
+  const world = screenToWorld(sx, sy);
+  const snapIdx = findNearestNode(world.x, world.y, CONFIG.nodeSnapRadius);
+  let endScreenX = sx;
+  let endScreenY = sy;
+
+  // If snapping, draw the preview line to the snapped node position.
+  if (snapIdx !== -1) {
+    const snapped = worldToScreen(nodes[snapIdx].x, nodes[snapIdx].y);
+    endScreenX = snapped.x;
+    endScreenY = snapped.y;
+  }
+
+  // Draw the preview line in screen space (outside the camera transform).
+  const startScreen = worldToScreen(startWorldX, startWorldY);
+  ctx.beginPath();
+  ctx.moveTo(startScreen.x, startScreen.y);
+  ctx.lineTo(endScreenX, endScreenY);
+  ctx.strokeStyle = CONFIG.previewStrokeColor;
+  ctx.lineWidth = CONFIG.defaultLineWidth;
   ctx.stroke();
 });
 
-canvas.addEventListener("mouseup", function() {
+// ============================================================
+// MOUSE UP — finish drawing, finish panning, or select a line.
+// If the mouse didn't move (click without drag), try to select
+// a line near the click point. Otherwise, save the new line
+// with nodes at both endpoints (snapping where applicable).
+// ============================================================
+canvas.addEventListener("mouseup", function(event) {
+  // End panning.
+  if (isPanning) {
+    isPanning = false;
+    return;
+  }
+
+  if (!isDrawing) return;
   isDrawing = false;
+
+  const { sx, sy } = getCanvasPos(event);
+  const world = screenToWorld(sx, sy);
+
+  if (!hasDragged) {
+    // User clicked without dragging — try to select a line.
+    // The click threshold is in screen pixels, so convert to world units.
+    const clickThresholdWorld = CONFIG.clickThreshold / camera.zoom;
+    let closestIndex = -1;
+    let closestDist = Infinity;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const dist = distanceToLine(world.x, world.y, line);
+
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIndex = i;
+      }
+    }
+
+    // Select the line if it's within the threshold, otherwise deselect.
+    if (closestDist <= clickThresholdWorld) {
+      selectedLineIndex = closestIndex;
+    } else {
+      selectedLineIndex = -1;
+    }
+
+    redrawCanvas();
+    return;
+  }
+
+  // User dragged — create the line.
+  // A node is created only at the END of the line (or reused if snapping).
+  // The start reuses an existing node if snapped, otherwise stores raw coords.
+  const eNode = getOrCreateNode(world.x, world.y);
+
+  // Don't create a line from a node to itself.
+  if (startNodeIndex !== -1 && startNodeIndex === eNode) {
+    redrawCanvas();
+    return;
+  }
+
+  lines.push({
+    startNode: startNodeIndex,   // -1 if not snapped, or an existing node index.
+    startX: startWorldX,         // Raw start position (used when startNode is -1).
+    startY: startWorldY,
+    endNode: eNode,
+  });
+
+  // Deselect any previously selected line when drawing a new one.
+  selectedLineIndex = -1;
+
+  redrawCanvas();
 });
 
+// ============================================================
+// WHEEL — zoom in/out at the mouse cursor position.
+// Scrolling up zooms in, scrolling down zooms out.
+// ============================================================
+canvas.addEventListener("wheel", function(event) {
+  event.preventDefault();
 
-// function draw();
+  const { sx, sy } = getCanvasPos(event);
+
+  // deltaY is positive when scrolling down (zoom out).
+  const direction = event.deltaY < 0 ? 1 : -1;
+  const newZoom = camera.zoom * (1 + direction * CONFIG.wheelZoomStep);
+
+  zoomAtPoint(newZoom, sx, sy);
+}, { passive: false });
+
+// ============================================================
+// KEYBOARD — press Delete or Backspace to remove selected line.
+// Removes the line, then garbage-collects any orphaned nodes
+// (nodes no longer connected to any line).
+// Scoped to the canvas element so it only fires when the canvas
+// has focus. This prevents conflicts with browser navigation
+// (e.g. Backspace triggering browser back). The canvas receives
+// focus automatically on mousedown via canvas.focus().
+// ============================================================
+canvas.addEventListener("keydown", function(event) {
+  if (event.key === "Delete" || event.key === "Backspace") {
+    // Prevent the browser from navigating back on Backspace.
+    event.preventDefault();
+
+    if (selectedLineIndex === -1) return;
+
+    // Remove the selected line from the array.
+    lines.splice(selectedLineIndex, 1);
+    selectedLineIndex = -1;
+
+    // Clean up nodes that are no longer connected to any line.
+    removeOrphanedNodes();
+
+    redrawCanvas();
+  }
+});
+
+// ============================================================
+// Initial setup: size the canvas, center on the Nexus, and draw.
+// ============================================================
+resizeCanvas();
+centerOnNexus();
+
+})();
