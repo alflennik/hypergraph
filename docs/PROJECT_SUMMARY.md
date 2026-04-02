@@ -1,6 +1,6 @@
 # Hyper Visual — Project Summary
 
-> **Last updated:** 2026-03-27 (v2 — updated node/line model, functions, data flow)
+> **Last updated:** 2026-03-29 (v3 — updated filenames to visualizationPlane.*, corrected line count, error handling, and open issues)
 
 > **Living document.** This file should be reviewed and updated (if necessary)
 > by the AI agent after every use of the **context-loading-strategy** skill.
@@ -20,7 +20,7 @@ lines render in red with a thicker stroke.
 
 - **Tech stack:** Plain HTML5, CSS, and vanilla JavaScript (no frameworks,
   no bundler, no npm dependencies).
-- **How to run:** Open `visualPlane.html` in any web browser. No build step.
+- **How to run:** Open `visualizationPlane.html` in any web browser. No build step.
 
 ## Directory Structure
 
@@ -28,9 +28,9 @@ Flat layout — code files at the project root, documentation in `docs/`.
 
 | File | Purpose |
 |------|---------|
-| `visualPlane.html` | Page shell. Loads CSS and JS, defines the canvas (`#plane-1`, `tabindex="0"`), heading, and zoom toolbar inside `#canvas-wrapper`. |
-| `visualPlane.css` | Responsive layout (85vw x 85vh canvas wrapper), zoom toolbar styles, canvas styling. |
-| `visualPlane.js` | All application logic: camera/pan/zoom, node/line graph model, Nexus, snapping, drawing, hit-testing, orphan cleanup, keyboard handling. (~640 lines, wrapped in an IIFE.) |
+| `visualizationPlane.html` | Page shell. Loads CSS and JS, defines the canvas (`#plane-1`, `tabindex="0"`), heading, and zoom toolbar inside `#canvas-wrapper`. |
+| `visualizationPlane.css` | Responsive layout (85vw x 85vh canvas wrapper), zoom toolbar styles, canvas styling (~80 lines). |
+| `visualizationPlane.js` | All application logic: camera/pan/zoom, node/line graph model, Nexus, snapping, drawing, hit-testing, orphan cleanup, keyboard handling (~563 lines, wrapped in an IIFE). |
 | `README.md` | Single-line title — "Visualization Plane for Hyper Graph". |
 | `.gitignore` | Ignores `issues.txt` and `fixed-issues.md` from version control. |
 | `docs/PROJECT_SUMMARY.md` | This file. |
@@ -39,7 +39,7 @@ Flat layout — code files at the project root, documentation in `docs/`.
 
 ## Architecture & Data Flow
 
-- **Entry point:** `visualPlane.html` loads the CSS in `<head>` and the JS
+- **Entry point:** `visualizationPlane.html` loads the CSS in `<head>` and the JS
   script at the end of `<body>` so the DOM is ready.
 - **Camera system:** A `camera` object holds `panX`, `panY` (world-unit
   offsets) and `zoom` (multiplier). `screenToWorld()` and `worldToScreen()`
@@ -71,7 +71,7 @@ Flat layout — code files at the project root, documentation in `docs/`.
   7. `resizeCanvas()` — syncs canvas drawing buffer to CSS layout size.
      Called on load and on window resize.
 
-## Key Functions (visualPlane.js)
+## Key Functions (visualizationPlane.js)
 
 | Function | Description |
 |----------|-------------|
@@ -93,7 +93,7 @@ Flat layout — code files at the project root, documentation in `docs/`.
 ## Key Patterns & Conventions
 
 - **IIFE wrapper:** The entire script runs inside an IIFE. If `getContext`
-  fails, the script alerts and returns early — no listeners are registered.
+  fails, the script throws an `Error` — no listeners are registered.
 - **Camera/viewport pattern:** All line data stored in world space. Camera
   transform applied during rendering. Screen-to-world conversion for input.
 - **CONFIG object:** Centralizes colors, stroke widths, thresholds, and
@@ -102,17 +102,28 @@ Flat layout — code files at the project root, documentation in `docs/`.
   Canvas buffer resized to match on load and window resize.
 - **Naming:** `camelCase` for JS variables/functions; DOM ids in kebab-case;
   `CONFIG` in SCREAMING_SNAKE for the object name.
-- **Error handling:** Single `alert` if canvas context is unavailable.
+- **Error handling:** Single `throw new Error` if canvas 2D context is unavailable.
 - **Focus management:** Canvas has `tabindex="0"` and is focused on
   mousedown so keyboard events are received without a separate click.
 
 ## Known Issues
 
-- **1 open Low issue (from `docs/issues.txt`):** No persistence — the
-  `nodes`/`lines` arrays live only in memory. Refreshing the page clears
-  all drawings. Suggested fix: localStorage or file export/import.
-- **Doc drift:** `docs/fixed-issues.md` still says `dragThreshold` is 3px;
-  the current code uses `CONFIG.dragThreshold = 15`.
+From `docs/issues.txt` — **6 open issues:**
+
+**Moderate:**
+- Right-click during drawing may leave inconsistent state (no button-2 guard).
+- Free-space starts can yield degenerate/near-zero-length lines when the end
+  snaps very close to the start (`startNode === -1` case bypasses self-loop check).
+- `resizeCanvas()` doesn't adjust `panX`/`panY` for new dimensions — Nexus
+  and view drift after window resize vs initial `centerOnNexus`.
+
+**Low:**
+- No persistence — `nodes`/`lines` arrays live only in memory. Refreshing
+  the page clears all drawings.
+- No grab/grabbing cursor feedback when panning.
+- Documentation drift — `fixed-issues.md` says `dragThreshold` is 3px vs
+  code `CONFIG.dragThreshold = 15`; `issues.txt` still references old
+  `visualPlane.js` filenames and line numbers.
 
 ## Possible Extensions
 
@@ -121,3 +132,5 @@ Flat layout — code files at the project root, documentation in `docs/`.
 - PNG/SVG export
 - Variable line styles
 - Touch/pointer event support
+- Min segment length validation
+- Split JS into smaller modules (currently ~563 lines in one file)
