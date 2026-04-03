@@ -330,6 +330,21 @@
     redrawCanvas();
   };
 
+  const resetZoom = () => {
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    const planeCenter = convertViewportToPlane(centerX, centerY);
+
+    view.zoom = 1;
+
+    view.panX = centerX - planeCenter.x;
+    view.panY = centerY - planeCenter.y;
+
+    updateZoomDisplay();
+    redrawCanvas();
+  };
+
   /** Event listeners — canvas interactions and toolbar buttons. */
 
   window.addEventListener("resize", resizeCanvas);
@@ -347,7 +362,8 @@
   });
 
   document.getElementById("zoom-reset-btn").addEventListener("click", () => {
-    centerOnNexus();
+    // centerOnNexus();
+    resetZoom();
   });
 
   /** Recenter button — pans and zooms to center the Nexus node. */
