@@ -20,7 +20,7 @@ const getNexus = () => {
   return nexus
 };
 
-console.log("nexus:", getNexus());
+// console.log("nexus:", getNexus());
 
 const createNode = (node, nodeName) => {
   const newNode = {[nodeName]: nodeName};
@@ -59,8 +59,25 @@ const testNode_3 = createNode(nexus, "testNode_3");
 // console.log("nodeConnect", util.inspect(nodeConnect, { depth: null, colors: true }));
 
   const createEdge = (node1, node2) => {
+    const keys = [...nodeConnect.keys()];
+
+    if (!keys.includes(node1) || !keys.includes(node2)) {
+      console.log("One or both nodes do not/doesn't exist");
+      console.log("node1", node1)
+      console.log("node2", node2)
+      console.log("keys", keys)
+
+      return;
+    }
+
     const node1Connections = nodeConnect.get(node1) || [];
     const node2Connections = nodeConnect.get(node2) || [];
+
+    if (node1Connections.includes(node2) || node2Connections.includes(node1)) {
+      console.log("These nodes are already connected");
+
+      return;
+    }
 
     node1Connections.push(node2);
     node2Connections.push(node1);
@@ -70,12 +87,12 @@ const testNode_3 = createNode(nexus, "testNode_3");
     nodeConnect.set(node2, node2Connections);
   };
 
-  createEdge(testNode_1, testNode_3);
+  createEdge(testNode_1, testNode_2);
 
   // console.log("nodeConnect-NEW-EDGE", util.inspect(nodeConnect, { depth: null, colors: true }));
 
   const getEdges = (node) => {
-    const keys = [nodeConnect.key()];
+    const keys = [...nodeConnect.keys()];
 
     if (!keys.includes(node)) {
       console.log("This node does not exist");
