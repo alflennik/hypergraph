@@ -1,6 +1,6 @@
 # Hyper Visual — Project Summary
 
-> **Last updated:** 2026-04-02 (v4 — corrected stale names: camera→view, lines→edges, screenToWorld→convertViewportToPlane, worldToScreen→convertPlaneToViewport, selectedLineIndex→selectedEdgeIndex, zoomAtPoint→applyZoomAtPoint, removeOrphanedNodes→removeUnusedNodes, distanceToLine→calcDistanceToEdge, startNode=-1→startNode=null, findNearestNode returns null not -1; updated line count to 553)
+> **Last updated:** 2026-04-07 (v5 — line count ~688 for `visualizationPlane.js`; removed stale `isNodeUsed` row; documented subtree drag via `collectSubtreeNodes` / `dragSubtreeNodeIndices`; noted `lastDragPlaneX`/`lastDragPlaneY` vs `lastDragPointPlane*` naming bug)
 
 > **Living document.** This file should be reviewed and updated (if necessary)
 > by the AI agent after every use of the **context-loading-strategy** skill.
@@ -30,7 +30,7 @@ Flat layout — code files at the project root, documentation in `docs/`.
 |------|---------|
 | `visualizationPlane.html` | Page shell. Loads CSS and JS, defines the canvas (`#plane-1`, `tabindex="0"`), heading, and zoom toolbar inside `#canvas-wrapper`. |
 | `visualizationPlane.css` | Responsive layout (85vw x 85vh canvas wrapper), zoom toolbar styles, canvas styling (~80 lines). |
-| `visualizationPlane.js` | All application logic: view/pan/zoom, node/edge graph model, Nexus, snapping, drawing, hit-testing, orphan cleanup, keyboard handling (~553 lines, wrapped in an IIFE). |
+| `visualizationPlane.js` | All application logic: view/pan/zoom, node/edge graph model, Nexus, snapping, drawing, hit-testing, subtree drag when an edge is selected, orphan cleanup, keyboard handling (~688 lines, wrapped in an IIFE). |
 | `README.md` | Single-line title — "Visualization Plane for Hyper Graph". |
 | `.gitignore` | Ignores `issues.txt` and `fixed-issues.md` from version control. |
 | `docs/PROJECT_SUMMARY.md` | This file. |
@@ -66,10 +66,12 @@ Flat layout — code files at the project root, documentation in `docs/`.
   4. `wheel` — zooms at cursor via `applyZoomAtPoint()`.
   5. `keydown` (scoped to canvas) — Delete/Backspace splices the selected
      edge and calls `removeUnusedNodes()` to clean up unused non-Nexus nodes.
-  6. `redrawCanvas()` — clears canvas, applies view transform via
+  6. When an edge is selected, dragging moves the **subtree** rooted at that
+     edge’s **end node** (`collectSubtreeNodes`, `dragSubtreeNodeIndices`).
+  7. `redrawCanvas()` — clears canvas, applies view transform via
      `ctx.setTransform()`, draws all segments and nodes. Nexus drawn last
      (on top). Line widths divided by zoom for consistent screen thickness.
-  7. `resizeCanvas()` — syncs canvas drawing buffer to CSS layout size.
+  8. `resizeCanvas()` — syncs canvas drawing buffer to CSS layout size.
      Called on load and on window resize.
 
 ## Key Functions (visualizationPlane.js)
@@ -84,7 +86,7 @@ Flat layout — code files at the project root, documentation in `docs/`.
 | `centerOnNexus()` | Resets view pan/zoom so the Nexus node is centered on screen. |
 | `findNearestNode(wx, wy)` | Returns the index of the nearest node within snap radius, or `null`. |
 | `getOrCreateNode(wx, wy)` | Returns an existing node index if within snap radius, or creates a new one. |
-| `isNodeUsed(index)` | Checks whether any edge references the given node index. |
+| `collectSubtreeNodes(rootNodeIndex)` | Stack walk from `rootNodeIndex` following edges where `edge.startNode === current` (used for subtree drag). |
 | `removeUnusedNodes()` | Removes unused non-Nexus nodes and remaps edge references. |
 | `redrawCanvas()` | Clears canvas, applies view transform, redraws all segments and nodes (Nexus on top). |
 | `calcDistanceToEdge(px, py, ...)` | Shortest distance from a point to an edge segment (world space). |
@@ -125,6 +127,9 @@ From `docs/issues.txt` — **6 open issues:**
 - Documentation drift — `fixed-issues.md` says `dragThreshold` is 3px vs
   code `CONFIG.dragThreshold = 15`; `issues.txt` still references old
   `visualPlane.js` filenames and line numbers.
+- **Code hygiene:** `mousemove` assigns `lastDragPlaneX` / `lastDragPlaneY`
+  but the file declares `lastDragPointPlaneX` / `lastDragPointPlaneY` — likely
+  accidental globals; should be unified to avoid subtle bugs.
 
 ## Possible Extensions
 
@@ -134,4 +139,4 @@ From `docs/issues.txt` — **6 open issues:**
 - Variable line styles
 - Touch/pointer event support
 - Min segment length validation
-- Split JS into smaller modules (currently ~553 lines in one file)
+- Split JS into smaller modules (currently ~688 lines in one file)

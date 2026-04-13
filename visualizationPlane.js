@@ -147,7 +147,7 @@
       view.panY * view.zoom
     );
 
-    // --- Draw edges ---
+    // Draw edges
     for (let i = 0; i < edges.length; i++) {
       const edge = edges[i];
 
@@ -296,6 +296,36 @@
     nodes = newNodes;
   };
 
+  // section
+  let isDraggingEdge = false;
+  let draggedEdgeIndex = null;
+  let dragSubtreeNodeIndices = null;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+  let lastDragPointPlaneX = 0;
+  let lastDragPointPlaneY = 0;
+
+  const collectSubtreeNodes = (rootNodeIndex) => {
+    const visitedIndexes = new Set();
+    const indexList = [rootNodeIndex];
+
+    while (indexList.length > 0) {
+      const current = indexList.pop();
+
+      if (visitedIndexes.has(current)) continue;
+      visitedIndexes.add(current);
+
+      for (const edge of edges) {
+        if (edge.startNode === current && !visitedIndexes.has(edge.endNode)) {
+          indexList.push(edge.endNode);
+        }
+      }
+
+    };
+    
+    return visitedIndexes;
+  };
+
   const applyZoomAtPoint = (newZoom, viewportX, viewportY) => {
     // Clamp the new zoom to the configured range.
     newZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, newZoom));
@@ -371,9 +401,12 @@
     centerOnNexus();
   });
 
+  // section
   canvas.addEventListener("mousedown", (event) => {
     // Focus the canvas so it can receive keyboard events (e.g. Delete/Backspace).
     canvas.focus();
+
+    // canvas.style.cursor = "grabbing";
 
     const { viewportX, viewportY } = getCanvasPos(event);
     startViewportX = viewportX;
@@ -386,6 +419,25 @@
       lastPanViewportX = viewportX;
       lastPanViewportY = viewportY;
       event.preventDefault();
+      return;
+    }
+
+    // Drag Edge
+
+    if (selectedEdgeIndex != null) {
+      canvas.style.cursor = "grabbing";
+      isDraggingEdge = true;
+
+      const plane = convertViewportToPlane(viewportX, viewportY);
+      lastDragPlaneX = plane.x;
+      lastDragPlaneY = plane.y;
+
+      dragSubtreeNodeIndices = collectSubtreeNodes(edges[selectedEdgeIndex].endNode);
+
+      // console.log("subTreeNodes", subTreeNodes);
+      // console.log("selectedEdgeIndex:", selectedEdgeIndex);
+      // console.log("Node:", edges[0].endNode);
+      // isDrawing = true;
       return;
     }
 
@@ -409,6 +461,7 @@
     }
   });
 
+  // section
   canvas.addEventListener("mousemove", (event) => {
     const { viewportX, viewportY } = getCanvasPos(event);
 
@@ -422,6 +475,42 @@
       lastPanViewportX = viewportX;
       lastPanViewportY = viewportY;
       redrawCanvas();
+      return;
+    }
+
+    // Drag Edge
+    if (selectedEdgeIndex != null && dragSubtreeNodeIndices != null) {
+      const plane = convertViewportToPlane(viewportX, viewportY);
+      const distanceFromX = plane.x - lastDragPlaneX;
+      const distanceFromY = plane.y - lastDragPlaneY;
+
+      for (const nodeIndex of dragSubtreeNodeIndices) {
+        nodes[nodeIndex].x += distanceFromX;
+        nodes[nodeIndex].y += distanceFromY;
+      }
+
+      const draggedEdge = edges[selectedEdgeIndex];
+      if (draggedEdge.startNode === null) {
+        draggedEdge.startX += distanceFromX;
+        draggedEdge.startY += distanceFromY;
+      }
+
+      lastDragPlaneX = plane.x;
+      lastDragPlaneY = plane.y;
+
+      hasDragged = true;
+      isDrawing = true;
+
+      redrawCanvas();
+
+
+    // if (selectedEdgeIndex != null) {
+      // console.log("selectedEdgeIndex:", selectedEdgeIndex);
+      // console.log("Node:", edges[0].endNode);
+      // const subTreeNodes = collectSubtreeNodes(edges[selectedEdgeIndex].endNode);
+      // console.log("dragSubtreeNodeIndices:", dragSubtreeNodeIndices);
+      // console.log("selectedEdgeIndex-move:", selectedEdgeIndex);
+
       return;
     }
 
@@ -462,12 +551,15 @@
     context.stroke();
   });
 
+  // section
   canvas.addEventListener("mouseup", (event) => {
     // End panning.
     if (isPanning) {
       isPanning = false;
       return;
     }
+
+    console.log("isDrawing:", isDrawing)
 
     if (!isDrawing) return;
     isDrawing = false;
@@ -495,11 +587,37 @@
       // Select the edge if it's within the threshold, otherwise deselect.
       if (closestDist <= clickThresholdPlane) {
         selectedEdgeIndex = closestIndex;
+        canvas.style.cursor = "grab";
+        isDraggingEdge = false;
+        console.log("isDraggingEdge-0", isDraggingEdge);
+        console.log("dragSubtreeNodeIndices-up", dragSubtreeNodeIndices);
       } else {
         selectedEdgeIndex = null;
+        isDraggingEdge = false;
+        canvas.style.cursor = "crosshair";
       }
 
       redrawCanvas();
+      return;
+    }
+
+    // if (isDraggingEdge = true) {
+      // selectedEdgeIndex = null;
+      // isDraggingEdge = false;
+      // // hasDragged = false;
+      // console.log("isDraggingEdge-1", isDraggingEdge);
+      // console.log("selectedEdgeIndex-3", selectedEdgeIndex);
+      // canvas.style.cursor = "crosshair";
+    // }
+
+    if (selectedEdgeIndex != null && dragSubtreeNodeIndices != null) {
+      console.log("new")
+      selectedEdgeIndex = null;
+      isDraggingEdge = false;
+      // hasDragged = false;
+      console.log("isDraggingEdge-1", isDraggingEdge);
+      console.log("selectedEdgeIndex-3", selectedEdgeIndex);
+      canvas.style.cursor = "crosshair";
       return;
     }
 
@@ -522,7 +640,9 @@
     });
 
     // Deselect any previously selected edge when drawing a new one.
-    selectedEdgeIndex = null;
+    if (selectedEdgeIndex != null) {
+      selectedEdgeIndex = null;
+    }
 
     redrawCanvas();
   });
