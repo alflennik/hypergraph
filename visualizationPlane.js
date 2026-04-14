@@ -1,3 +1,5 @@
+// TODO: Look Into Weak Maps For Attaching Data To Nodes. This is for finding/storing metadata for a node. The metadata would be the node's coordinates.
+
 /**
  * Wrap the entire script in an IIFE (Immediately Invoked Function
  * Expression) so all variables are scoped and don't leak into
