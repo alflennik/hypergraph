@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Visualization Plane</title>
-  <link rel="stylesheet" href="visualizationPlane.css">
+  <link rel="stylesheet" href="visualizationPlane_2.css">
 </head>
 <body>
   <h1 id="header">Visualization Plane</h1>
@@ -13,14 +13,14 @@
   <div id="canvas-wrapper">
 
     <!-- Zoom controls sit above the canvas. -->
-    <div id="zoom-toolbar">
+    <!-- <div id="zoom-toolbar">
       <button id="zoom-in-btn" title="Zoom In">+</button>
       <span id="zoom-level">100%</span>
       <button id="zoom-out-btn" title="Zoom Out">&minus;</button>
       <button id="zoom-reset-btn" title="Reset Zoom">Reset</button>
       <button id="recenter-btn" title="Recenter on Nexus">Recenter</button>
       <span id="toolbar-hint">Scroll to zoom &middot; Shift + drag to pan</span>
-    </div>
+    </div> -->
 
     <!-- Canvas is sized dynamically via CSS and JS. tabindex allows keyboard events. -->
     <canvas id="plane-1" tabindex="0">
@@ -28,7 +28,7 @@
     </canvas>
   </div>
 
-  <!-- <script src="visualizationPlane_2.js"></script> -->
-  <script src="visualizationPlane.js"></script>
+  <script type="module" src="visualizationPlane_2.js"></script>
+  <!-- <script src="visualizationPlane.js"></script> -->
 </body>
 </html>

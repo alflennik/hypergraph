@@ -1,0 +1,3 @@
+// RUN SERVER:
+cd /Users/paulc1/Desktop/1-Projects/hyper-visual
+npx --yes live-server --port=8080 --open=/visualizationPlane2/visualizationPlane_2.html

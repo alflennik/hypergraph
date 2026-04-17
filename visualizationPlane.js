@@ -5,6 +5,14 @@
  * Expression) so all variables are scoped and don't leak into
  * the global namespace.
  */
+const createGraph = require('./hypergraph');
+const graph = createGraph();
+
+(() => {
+  const canvas = document.getElementById("plane-1");
+  const context = canvas.getContext("2d");
+})
+
 (() => {
   const CONFIG = {
     defaultStrokeColor: "black",   // Color for normal (unselected) edges.
