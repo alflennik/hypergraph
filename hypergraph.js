@@ -22,29 +22,47 @@ const CreateGraph = () => {
   };
 
   const getNexus = () => {
-    return nexus
+    return nexus;
   };
 
   // console.log("nexus:", getNexus());
 
-  const createNode = (node, nodeName) => {
+  const createNode = (nodeName) => {
     const newNode = { [nodeName]: nodeName };
-    const nodeExists = nodeConnect.get(node);
+    // const nodeExists = nodeConnect.get(node);
 
-    if (!nodeExists) {
-      console.log("DOESN'T EXIST");
-      throw new Error("Node does not exist");
-    }
+    // if (!nodeExists) {
+    //   console.log("DOESN'T EXIST");
+    //   throw new Error("Node does not exist");
+    // }
 
-    console.log("EXISTS");
+    // console.log("EXISTS");
 
-    const nodeValues = nodeConnect.get(node);
-    nodeConnect.set(node, nodeValues.concat(newNode));
+    // const nodeValues = nodeConnect.get(node);
+    // nodeConnect.set(node, nodeValues.concat(newNode));
 
-    nodeConnect.set(newNode, [node]);
+    nodeConnect.set(newNode, []);
 
     return newNode;
   };
+  // const createNode = (node, nodeName) => {
+  //   const newNode = { [nodeName]: nodeName };
+  //   const nodeExists = nodeConnect.get(node);
+
+  //   if (!nodeExists) {
+  //     console.log("DOESN'T EXIST");
+  //     throw new Error("Node does not exist");
+  //   }
+
+  //   console.log("EXISTS");
+
+  //   const nodeValues = nodeConnect.get(node);
+  //   nodeConnect.set(node, nodeValues.concat(newNode));
+
+  //   nodeConnect.set(newNode, [node]);
+
+  //   return newNode;
+  // };
 
 
 

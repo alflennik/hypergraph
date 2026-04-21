@@ -1,6 +1,8 @@
 Function Signature:
 
 - ctx.fillRect(x, y, width, height);
+- ctx.arc(centX, centY, rad, startAngle, endAngle, [, counterclockwise]);
+- ellipse(centX, centY, radX, radY, rotation, startAngle, endAngle)
 
 ================================================================================
 ================================================================================
