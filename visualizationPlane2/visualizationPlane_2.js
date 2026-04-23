@@ -5,6 +5,7 @@ import debug from './debug.js';
 
 const Debugger = debug();
 
+// section
 const graph = createGraph();
 const egdesArray = graph.nodeConnect;
 const createHyperEdge = graph.createEdge;
@@ -26,6 +27,7 @@ if (canvas) {
   throw new Error("The canvas element is not available. Drawing cannot proceed.");
 }
 
+// section:
 if (context) {
   // CONFIGURATION:
   const CONFIG = {
@@ -53,6 +55,7 @@ if (context) {
     wheelZoomStep: 0.1,            // How much each scroll tick changes the zoom (10%).
   };
 
+  // section
   // Drag Coordinates
   let dragStartX = null;
   let dragStartY = null;
@@ -91,6 +94,7 @@ if (context) {
     y: (planeY + view.panY) * view.zoom,
   });
 
+  // section
   // CANVAS CENTER:
   const dpr = window.devicePixelRatio || 1;
   canvas.width = canvas.clientWidth * dpr;
@@ -103,30 +107,33 @@ if (context) {
 
   const nodes = [];
   const edges = [];
-  const nodesMap = new WeakMap();
+  const snapPosition = [];
+  // const nodesMap = new WeakMap();
   const edgesMap = new WeakMap();
+  const nodesMap = new Map();
+
+  function posKey(x, y) {
+    return `${x},${y}`;
+  }
 
   // CREATE NEXUS NODE
   // context.beginPath();
   // context.fillStyle = CONFIG.nexusColor;
   // context.arc(canvasCenterX, canvasCenterY, CONFIG.nexusRadius, 0, Math.PI * 2);
   // context.fill();
+  //section
   const createNexus = (x, y, r) => {
     context.beginPath();
     context.fillStyle = CONFIG.nexusColor;
     context.arc(x, y, CONFIG.nexusRadius, 0, Math.PI * 2);
     context.fill();
-  }
+  };
   createNexus(canvasCenterX, canvasCenterY);
 
-  // context.fillStyle = "red";
-  // context.fillRect(canvasCenterX - 20, canvasCenterY - 20, 20, 20);
+  nodesMap.set(posKey(canvasCenterX, canvasCenterY), nexus);
 
-  // context.fillStyle = "blue";
-  // context.fillRect(canvasCenterX - 20 / 2, canvasCenterY - 20 / 2, 20, 20);
+  console.log("HERE HERE --- ", nodesMap.get(posKey(canvasCenterX, canvasCenterY)));
 
-  // TODO: Think about returning the node along with its edges array in the createNode function.
-  // creating the node returns the node to a variable which will now be the name of the node. It will also create the edges that connect it to the node imputed as the arguement. 
   const getCanvasPos = (event) => {
     const bounds = canvas.getBoundingClientRect();
     return {
@@ -258,6 +265,8 @@ if (context) {
 
   canvas.addEventListener("mousemove", (event) => {
     const { viewportX, viewportY } = getCanvasPos(event);
+    const snapPos = {};
+    const distance = 0;
 
     if (!isDrawing) return;
 
@@ -280,16 +289,43 @@ if (context) {
     // context.strokeStyle = "#000000";
     // context.lineWidth = 2;
     // context.stroke();
+    
+    if (snapPosition.length === 0) {
+      snapPos.snapStartX = canvasCenterX;
+      snapPos.snapStartY = canvasCenterY;
+    } else {
+      const tempDistArr = {};
+      let tempDist = 0;
+      snapPosition.push({"startX": canvasCenterX, "startY": canvasCenterY});
+      snapPosition.forEach((pos, index) => {
+        tempDist = Math.hypot(startViewport.x - pos.startX, startViewport.y - pos.startY);
+        // tempDistArr.push({[tempDist]: pos});
+        tempDistArr[tempDist] = pos;
+      })
+      // console.log("CHECK-ARR-keys", Object.keys(tempDistArr))
+      // console.log("CHECK-ARR-values", Object.values(tempDistArr))
+      // console.log("SMALLEST", Math.min(...Object.keys(tempDistArr)))
+      const smallVal = Math.min(...Object.keys(tempDistArr));
+      // console.log("VALUE-FOR-SMALLEST", tempDistArr[smallVal])
+
+      // snapPos.snapStartX = startViewport.x;
+      // snapPos.snapStartY = startViewport.y;
+      snapPos.snapStartX = tempDistArr[smallVal].startX;
+      snapPos.snapStartY = tempDistArr[smallVal].startY;
+    }
 
     context.beginPath();
-    context.moveTo(startViewport.x, startViewport.y);
+    // context.moveTo(startViewport.x, startViewport.y);
+    context.moveTo(snapPos.snapStartX, snapPos.snapStartY);
     context.lineTo(endViewportX, endViewportY);
     context.strokeStyle = CONFIG.previewStrokeColor;
     context.lineWidth = CONFIG.defaultEdgeWidth;
     context.stroke();
 
-    dragStartX = startViewport.x;
-    dragStartY = startViewport.y;
+    // dragStartX = startViewport.x;
+    // dragStartY = startViewport.y;
+    dragStartX = snapPos.snapStartX;
+    dragStartY = snapPos.snapStartY;
     dragEndX = endViewportX;
     dragEndY = endViewportY;
 
@@ -303,13 +339,19 @@ if (context) {
     const { viewportX, viewportY } = getCanvasPos(event);
 
     if (hasDragged) {
-      // drawNode(dragStartX, dragStartY);
+      // TODO: try putting nodeMap.get(posKey(dragStartX, dragStartY)) as argument for createHyperEdge
+      
       drawNode(dragEndX, dragEndY);
       nodes.push({"nodeStart": [dragStartX, dragStartY], "nodeEnd": [dragEndX, dragEndY]})
+      console.log(`dragStartX: ${dragStartX}`, `dragEndX: ${dragEndX}`)
       const testNode1 = createHyperNode("testNode");
-      console.log("TESTING-1", Debugger(egdesArray));
-      createHyperEdge(nexus, testNode1);
+      nodesMap.set(posKey(dragEndX, dragEndY), testNode1)
+      console.log("HERE-HERE", nodesMap.get(posKey(dragStartX, dragStartY)))
+      // console.log("TESTING-1", Debugger(egdesArray));
+      createHyperEdge(nodesMap.get(posKey(dragStartX, dragStartY)), testNode1);
       console.log("TESTING-2", Debugger(egdesArray));
+      snapPosition.push({"startX": dragEndX, "startY": dragEndY});
+      console.log("snap", snapPosition);
       // egdesArray
       //  getHyperEdgesArray();
       //  getHyperNexus();
