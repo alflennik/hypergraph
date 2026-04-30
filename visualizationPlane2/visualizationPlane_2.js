@@ -3,56 +3,48 @@
 import createGraph from '../hypergraph.js';
 import debug from './debug.js';
 
-const Debugger = debug();
+const createVisualizationPlane = () => {
+  const Debugger = debug();
 
-// section
-const graph = createGraph();
-const egdesArray = graph.nodeConnect;
-const createHyperEdge = graph.createEdge;
-const createHyperNode = graph.createNode;
-const getHyperEdgesArray = graph.getEdges;
-const getHyperNexus = graph.getNexus;
-const deleteHyperEdge = graph.deleteEdge;
+  // section
+  const graph = createGraph();
+  const hypergraph = graph.nodeConnect;
+  const createHyperEdge = graph.createEdge;
+  const createHyperNode = graph.createNode;
+  const getHyperEdgesArray = graph.getEdges;
+  const getHyperNexus = graph.getNexus;
+  const deleteHyperEdge = graph.deleteEdge;
 
-const nexus = getHyperNexus();
+  const nexus = getHyperNexus();
 
-const canvas = document.getElementById("plane-1");
-let context = null;
+  const canvas = document.getElementById("plane-1");
+  const context = canvas.getContext("2d");
 
-if (canvas) {
-  context = canvas.getContext("2d");
-} else {
-  alert("The canvas element is not available. Drawing cannot proceed.");
-
-  throw new Error("The canvas element is not available. Drawing cannot proceed.");
-}
-
-// section:
-if (context) {
+  // section:
   // CONFIGURATION:
   const CONFIG = {
-    defaultStrokeColor: "black",   // Color for normal (unselected) edges.
-    selectedStrokeColor: "red",    // Color for the currently selected edge.
-    previewStrokeColor: "black",   // Color for the live preview edge while dragging.
-    defaultEdgeWidth: 1,            // Stroke width for normal edges (px).
-    selectedEdgeWidth: 3,           // Stroke width for the selected edge (px).
-    clickThreshold: 8,             // Max distance (px) from an edge to count as a click on it.
-    dragThreshold: 15,             // Min distance (px) mouse must move to count as a drag.
+    defaultStrokeColor: "black", // Color for normal (unselected) edges.
+    selectedStrokeColor: "red", // Color for the currently selected edge.
+    previewStrokeColor: "black", // Color for the live preview edge while dragging.
+    defaultEdgeWidth: 1, // Stroke width for normal edges (px).
+    selectedEdgeWidth: 3, // Stroke width for the selected edge (px).
+    clickThreshold: 8, // Max distance (px) from an edge to count as a click on it.
+    dragThreshold: 15, // Min distance (px) mouse must move to count as a drag.
 
     // Node settings.
-    nodeRadius: 12,                 // Radius of regular node circles (viewport px).
-    nodeColor: "blue",             // Fill color for regular nodes.
-    nodeSnapRadius: 12,            // Max distance (viewport px) to snap to an existing node.
+    nodeRadius: 12, // Radius of regular node circles (viewport px).
+    nodeColor: "blue", // Fill color for regular nodes.
+    nodeSnapRadius: 12, // Max distance (viewport px) to snap to an existing node.
 
     // Nexus node — the permanent, undeletable center node.
-    nexusRadius: 50,               // Radius of the Nexus node (viewport px).
-    nexusColor: "green",           // Fill color for the Nexus node.
+    nexusRadius: 50, // Radius of the Nexus node (viewport px).
+    nexusColor: "green", // Fill color for the Nexus node.
 
     // Zoom settings.
-    minZoom: 0.1,                  // Minimum zoom level (10%).
-    maxZoom: 10,                   // Maximum zoom level (1000%).
-    zoomStep: 0.15,                // How much each zoom button click changes the zoom (15%).
-    wheelZoomStep: 0.1,            // How much each scroll tick changes the zoom (10%).
+    minZoom: 0.1, // Minimum zoom level (10%).
+    maxZoom: 10, // Maximum zoom level (1000%).
+    zoomStep: 0.15, // How much each zoom button click changes the zoom (15%).
+    wheelZoomStep: 0.1, // How much each scroll tick changes the zoom (10%).
   };
 
   // section
@@ -96,18 +88,21 @@ if (context) {
 
   // section
   // CANVAS CENTER:
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.clientWidth * dpr;
-  canvas.height = canvas.clientHeight * dpr;
-  context.scale(dpr, dpr);
+  // const dpr = window.devicePixelRatio || 1;
+  // canvas.width = canvas.clientWidth * dpr;
+  // canvas.height = canvas.clientHeight * dpr;
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  // context.scale(dpr, dpr);
   // canvas.width = canvas.clientWidth;
   // canvas.height = canvas.clientHeight;
   const canvasCenterX = canvas.width / 2;
   const canvasCenterY = canvas.height / 2;
 
-  const nodes = [];
+  const connections = [];
   const edges = [];
   const snapPosition = [];
+  snapPosition.push({ "startX": canvasCenterX, "startY": canvasCenterY });
   // const nodesMap = new WeakMap();
   const edgesMap = new WeakMap();
   const nodesMap = new Map();
@@ -131,8 +126,6 @@ if (context) {
   createNexus(canvasCenterX, canvasCenterY);
 
   nodesMap.set(posKey(canvasCenterX, canvasCenterY), nexus);
-
-  console.log("HERE HERE --- ", nodesMap.get(posKey(canvasCenterX, canvasCenterY)));
 
   const getCanvasPos = (event) => {
     const bounds = canvas.getBoundingClientRect();
@@ -162,8 +155,8 @@ if (context) {
     // );
 
     // Draw edges
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
+    for (let i = 0; i < connections.length; i++) {
+      const node = connections[i];
 
       // Start position: use the node if snapped, otherwise raw coords.
       // const startX = (edge.startNode !== null) ? nodes[edge.startNode].x : edge.startX;
@@ -229,6 +222,7 @@ if (context) {
     const { viewportX, viewportY } = getCanvasPos(event);
     startViewportX = viewportX;
     startViewportY = viewportY;
+
     hasDragged = false;
 
     // context.beginPath();
@@ -289,14 +283,14 @@ if (context) {
     // context.strokeStyle = "#000000";
     // context.lineWidth = 2;
     // context.stroke();
-    
-    if (snapPosition.length === 0) {
+
+    if (snapPosition.length === 1) {
       snapPos.snapStartX = canvasCenterX;
       snapPos.snapStartY = canvasCenterY;
     } else {
       const tempDistArr = {};
       let tempDist = 0;
-      snapPosition.push({"startX": canvasCenterX, "startY": canvasCenterY});
+      // snapPosition.push({"startX": canvasCenterX, "startY": canvasCenterY});
       snapPosition.forEach((pos, index) => {
         tempDist = Math.hypot(startViewport.x - pos.startX, startViewport.y - pos.startY);
         // tempDistArr.push({[tempDist]: pos});
@@ -340,26 +334,97 @@ if (context) {
 
     if (hasDragged) {
       // TODO: try putting nodeMap.get(posKey(dragStartX, dragStartY)) as argument for createHyperEdge
-      
-      drawNode(dragEndX, dragEndY);
-      nodes.push({"nodeStart": [dragStartX, dragStartY], "nodeEnd": [dragEndX, dragEndY]})
-      console.log(`dragStartX: ${dragStartX}`, `dragEndX: ${dragEndX}`)
-      const testNode1 = createHyperNode("testNode");
-      nodesMap.set(posKey(dragEndX, dragEndY), testNode1)
-      console.log("HERE-HERE", nodesMap.get(posKey(dragStartX, dragStartY)))
-      // console.log("TESTING-1", Debugger(egdesArray));
-      createHyperEdge(nodesMap.get(posKey(dragStartX, dragStartY)), testNode1);
-      console.log("TESTING-2", Debugger(egdesArray));
-      snapPosition.push({"startX": dragEndX, "startY": dragEndY});
-      console.log("snap", snapPosition);
-      // egdesArray
-      //  getHyperEdgesArray();
-      //  getHyperNexus();
-      //  deleteHyperEdge();
+      // if () {
+
+      // }
+      const tempDistArr = {};
+      let tempDist = 0;
+
+      snapPosition.forEach((pos, index) => {
+        tempDist = Math.hypot(dragEndX - pos.startX, dragEndY - pos.startY);
+        // const existingEdge = connections.find((connection) => {
+        //   return connection.nodeEnd[0] === pos.startX;
+        // });
+        const existingEdge = connections.find((connection) => {
+          return connection.nodeStart[0] === dragStartX;
+        });
+
+        // console.log("DISTANCES:", index, tempDist);
+        // const existingEdge = connections.find((connection) => {
+        //   return (connection.nodeStart[0] === dragStartX && connection.nodeStart[1] === dragStartY) && (connection.nodeEnd[0] === pos.startX && connection.nodeEnd[1] === pos.startY);
+        // });
+        // console.log("existingEdge:", existingEdge);
+
+        if (tempDist < 20 && !existingEdge) {
+          console.log("IT'S CLOSE:", tempDist);
+          context.moveTo(dragStartX, dragStartY);
+          context.lineTo(pos.startX, pos.startY);
+          context.strokeStyle = CONFIG.selectedStrokeColor;
+          context.lineWidth = CONFIG.defaultEdgeWidth;
+          context.stroke();
+          createHyperEdge(nodesMap.get(posKey(dragStartX, dragStartY)), pos.startX, pos.startY);
+          connections.push({ "nodeStart": [dragStartX, dragStartY], "nodeEnd": [pos.startX, pos.startY] })
+          redrawCanvas();
+          hasDragged = false;
+
+          // createHyperEdge(nodesMap.get(posKey(pos.startX, pos.startY)), nodesMap.get(posKey(pos.startX, pos.startY)));
+        } else {
+          console.log("THIS RAN");
+        }
+        // console.log("dragStartX:", dragStartX);
+        // console.log("dragStartY:", dragStartY);
+        // console.log("pos.startX:", pos.startX);
+        // console.log("pos.startY:", pos.startY);
+        // console.log("==================================");
+        // console.log("dragEndX:", dragEndX);
+        // console.log("dragEndY:", dragEndY);
+        // console.log("pos.startX:", pos.startX);
+        // console.log("pos.startY:", pos.startY);
+        // tempDistArr.push({[tempDist]: pos});
+        tempDistArr[tempDist] = pos;
+      })
+
+      // TODO: look at snapPosition for pos.startX
+      snapPosition.forEach((pos, index) => {
+        tempDist = Math.hypot(dragEndX - pos.startX, dragEndY - pos.startY);
+        // tempDistArr.push({[tempDist]: pos});
+        tempDistArr[tempDist] = pos;
+      })
+      const smallVal = Math.min(...Object.keys(tempDistArr));
+      console.log("SMALL-VALL", smallVal);
+      if (hasDragged === true && smallVal > 20) {
+        drawNode(dragEndX, dragEndY);
+        connections.push({ "nodeStart": [dragStartX, dragStartY], "nodeEnd": [dragEndX, dragEndY] });
+        const testNode1 = createHyperNode("testNode");
+        nodesMap.set(posKey(dragEndX, dragEndY), testNode1);
+        createHyperEdge(nodesMap.get(posKey(dragStartX, dragStartY)), nodesMap.get(posKey(dragEndX, dragEndY)));
+        snapPosition.push({ "startX": dragEndX, "startY": dragEndY });
+        // console.log("snap", snapPosition);
+        // console.log("KEYS:", nodesMap.keys());
+        console.log("KEYS:", [...hypergraph.keys()]);
+        console.log("NODES-MAP:", nodesMap.get(posKey(dragStartX, dragStartY)));
+        console.log("NODES-MAP-2:", nodesMap.get(posKey(dragEndX, dragEndY)));
+        // hypergraph
+        //  getHyperEdgesArray();
+        //  getHyperNexus();
+        //  deleteHyperEdge();
+      }
+
+      if (hasDragged === true && smallVal < 20) {
+        redrawCanvas();
+        alert("Too Close to another node");
+      }
     }
+
+    //TODO: create code for selecting and highlighting a node and its edges if hasDragged = false. Look at the code for distance and snap position in the mousemove event.
 
     hasDragged = false;
     isDrawing = false;
+    //DEBUGG:
+    console.log("=====================================================");
+    console.log("==================== BOTTOM LOGS ====================");
+    console.log("=====================================================");
+    console.log(Debugger(hypergraph));
   });
 
 
@@ -368,14 +433,9 @@ if (context) {
   // context.arc(canvasCenterX, canvasCenterY, CONFIG.nexusRadius, 0, Math.PI * 2);
   // context.fill();
   // ctx.fillRect(5, 50, 20, 20);
-} else {
-  alert("A context plane cannot be found. Drawing cannot proceed.");
 
-  throw new Error("A context plane cannot be found. Drawing cannot proceed.");
+
+
 }
 
-//DEBUGG:
-console.log("=====================================================");
-console.log("==================== BOTTOM LOGS ====================");
-console.log("=====================================================");
-console.log(Debugger(egdesArray));
+createVisualizationPlane();
