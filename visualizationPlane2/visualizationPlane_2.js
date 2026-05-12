@@ -48,7 +48,12 @@ const createVisualizationPlane = () => {
   };
 
   // section
-  // Drag Coordinates
+  /* Mouse Coordinates */
+  const bounds = canvas.getBoundingClientRect();
+  let mouseX = 0;
+  let mouseY = 0;
+
+  /* Drag Coordinates */
   let dragStartX = null;
   let dragStartY = null;
   let dragEndX = null;
@@ -67,6 +72,9 @@ const createVisualizationPlane = () => {
 
   /** Track whether the mouse moved during a mousedown (to distinguish click vs drag). */
   let hasDragged = false;
+
+  let edgeSelected = false;
+  let selectedEdge = null;
 
   let view = {
     panX: 0,    // Horizontal pan offset (plane units).
@@ -141,6 +149,54 @@ const createVisualizationPlane = () => {
     context.arc(x, y, CONFIG.nodeRadius, 0, Math.PI * 2);
     context.fill();
   }
+  // const drawSelectedNode = (x, y) => {
+  //   context.beginPath();
+  //   context.fillStyle = "red";
+  //   context.arc(x, y, CONFIG.nodeRadius, 0, Math.PI * 2);
+  //   context.fill();
+  // }
+  const drawSelectedEdge = (x1, y1, x2, y2) => {
+    context.beginPath();
+    context.strokeStyle = "red";
+    context.lineWidth = 2.5;
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+
+    context.stroke();
+  }
+
+  // A function for getting the line closest to the mouse click -- grokAI
+  function distanceToSegment(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len2 = dx * dx + dy * dy;
+
+    if (len2 === 0) return Math.hypot(px - x1, py - y1); // line is a point
+
+    // Projection parameter t (clamped between 0 and 1)
+    let t = ((px - x1) * dx + (py - y1) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+
+    const projX = x1 + t * dx;
+    const projY = y1 + t * dy;
+
+    return Math.hypot(px - projX, py - projY);
+  };
+
+  // A funciton for removing connections cursor composer AI
+  // TODO: GOT IMPATIENT WITH THIS ONE. COULD HAVE DONE IT MYSELF
+  function removeConnection(startX, startY, endX, endY) {
+    const i = connections.findIndex(
+      (c) =>
+        c.nodeStart[0] === startX &&
+        c.nodeStart[1] === startY &&
+        c.nodeEnd[0] === endX &&
+        c.nodeEnd[1] === endY
+    );
+    if (i !== -1) connections.splice(i, 1);
+  }
+
+  let clickedOnNode = false;
 
   const redrawCanvas = () => {
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -164,32 +220,48 @@ const createVisualizationPlane = () => {
       // const endNode = nodes[edge.endNode];
 
       // nodes.push({"nodeStart": [dragStartX, dragStartY], "nodeEnd": [dragEndX, dragEndY]})
+      console.log("CLIDKED ON NODE", clickedOnNode);
+      if (clickedOnNode === true) {
+        const startX = node.nodeStart[0];
+        const startY = node.nodeStart[1];
+        const endX = node.nodeEnd[0];
+        const endY = node.nodeEnd[1];
 
-      const startX = node.nodeStart[0];
-      const startY = node.nodeStart[1];
-      const endX = node.nodeEnd[0];
-      const endY = node.nodeEnd[1];
+        context.beginPath();
+        context.moveTo(startX, startY);
+        context.lineTo(endX, endY);
 
-      context.beginPath();
-      context.moveTo(startX, startY);
-      context.lineTo(endX, endY);
+        context.stroke();
+        // drawSelectedNode(endX, endY);
+      } else {
+        const startX = node.nodeStart[0];
+        const startY = node.nodeStart[1];
+        const endX = node.nodeEnd[0];
+        const endY = node.nodeEnd[1];
 
-      // Highlight the selected edge.
-      // Divide lineWidth by zoom so strokes appear the same thickness
-      // on viewport regardless of zoom level.
-      // if (i === selectedEdgeIndex) {
-      //   context.strokeStyle = CONFIG.selectedStrokeColor;
-      //   context.lineWidth = CONFIG.selectedEdgeWidth / view.zoom;
-      // } else {
-      //   context.strokeStyle = CONFIG.defaultStrokeColor;
-      //   context.lineWidth = CONFIG.defaultEdgeWidth / view.zoom;
-      // }
+        context.beginPath();
+        context.strokeStyle = CONFIG.defaultStrokeColor;
+        context.lineWidth = CONFIG.defaultEdgeWidth;
+        context.moveTo(startX, startY);
+        context.lineTo(endX, endY);
 
-      context.stroke();
+        // Highlight the selected edge.
+        // Divide lineWidth by zoom so strokes appear the same thickness
+        // on viewport regardless of zoom level.
+        // if (i === selectedEdgeIndex) {
+        //   context.strokeStyle = CONFIG.selectedStrokeColor;
+        //   context.lineWidth = CONFIG.selectedEdgeWidth / view.zoom;
+        // } else {
+        //   context.strokeStyle = CONFIG.defaultStrokeColor;
+        //   context.lineWidth = CONFIG.defaultEdgeWidth / view.zoom;
+        // }
 
-      // drawNode(startX, startY);
-      drawNode(endX, endY);
+        context.stroke();
 
+        // drawNode(startX, startY);
+        drawNode(endX, endY);
+
+      }
 
     }
 
@@ -218,10 +290,132 @@ const createVisualizationPlane = () => {
     context.restore();
   };
 
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Delete" || event.key === "Backspace") {
+      if (edgeSelected === true) {
+        console.log("AN-EDGE-IS-SELECTED");
+        console.log("SELECTED-EDGE:", selectedEdge);
+
+        let node1 = nodesMap.get(posKey(selectedEdge.start[0], selectedEdge.start[1]));
+        let node2 = nodesMap.get(posKey(selectedEdge.end[0], selectedEdge.end[1]));
+
+        removeConnection(selectedEdge.start[0], selectedEdge.start[1], selectedEdge.end[0], selectedEdge.end[1]);
+        console.log("HERE:", node1);
+        console.log("HERE:", node2);
+
+        deleteHyperEdge(node1, node2);
+        redrawCanvas();
+        console.log(Debugger(hypergraph));
+      } else {
+        console.log("EDGE-NOT-SELECTED");
+        console.log("SELECTED-EDGE:", selectedEdge);
+      }
+    }
+  });
+
   canvas.addEventListener("mousedown", (event) => {
     const { viewportX, viewportY } = getCanvasPos(event);
+
+    const nodeKeys = nodesMap.keys();
     startViewportX = viewportX;
     startViewportY = viewportY;
+
+    mouseX = event.clientX - bounds.left;
+    mouseY = event.clientY - bounds.top;
+    const deltaViewportX = viewportX - startViewportX;
+    const deltaViewportY = viewportY - startViewportY;
+    // if (!hasDragged && Math.sqrt(deltaViewportX * deltaViewportX + deltaViewportY * deltaViewportY) < CONFIG.dragThreshold) return;
+
+
+
+    // if (event.button === 2) {
+    //   nodeKeys.forEach((key) => {
+    //     let lineDist = Math.hypot(mouseX - dragStartX, mouseY - dragStartY);
+    //     if (lineDist < 12) {
+
+    //     }
+    //   })
+    // }
+    let edgeStartX = 0;
+    let edgeStartY = 0;
+    let edgeEndX = 0;
+    let edgeEndY = 0;
+    let lineDistStartNode = 0;
+    let lineDistEndNode = 0;
+    let distToLine = 0;
+    let edgeMinLength = 0;
+    let closestEdgeDist = 0;
+    let closestEdge = null;
+    const minArr = [];
+
+    if (event.button === 0 && hasDragged === false) {
+      // connections.push({ "nodeStart": [dragStartX, dragStartY], "nodeEnd": [pos.startX, pos.startY] });
+      const mouseDist = [];
+      console.log("CONNECTIONS-LENTGH:", connections.length);
+      if (connections.length > 0) {
+        connections.forEach((key, index) => {
+          edgeStartX = key.nodeStart[0];
+          edgeStartY = key.nodeStart[1];
+          edgeEndX = key.nodeEnd[0];
+          edgeEndY = key.nodeEnd[1];
+
+          // lineDistStartNode = Math.hypot(mouseX - edgeStartX, mouseY - edgeStartY);
+          // lineDistEndNode = Math.hypot(mouseX - edgeEndX, mouseY - edgeEndX);
+          // distSum = lineDistStartNode + lineDistEndNode;
+          distToLine = distanceToSegment(mouseX, mouseY, edgeStartX, edgeStartY, edgeEndX, edgeEndY);
+          // // mouseDist.push({[key]:[lineDistStartNode + lineDistEndNode]});
+          mouseDist.push({
+            start: key.nodeStart,
+            end: key.nodeEnd,
+            dist: distToLine,
+          });
+
+
+          minArr.push(mouseDist[index].dist);
+        });
+
+        // console.log("MIN-ARR", minArr);
+        console.log("MOUSE-DIST:", mouseDist);
+        closestEdgeDist = Math.min(...minArr);
+        // console.log("CLOSEST-EDGE", closestEdge);
+
+        mouseDist.forEach((node) => {
+          if (node.dist === closestEdgeDist) {
+            closestEdge = node;
+            let clicked = Math.hypot(node.start[0] - node.end[0], node.start[1] - node.end[1]);
+            // distSum = lineDistStartNode + lineDistEndNode;
+            console.log("CLICKED:", clicked);
+            console.log("THIS-IS-THE-NODE", node);
+            console.log("CLOSEST-EDGE", closestEdge);
+
+          }
+        });
+        // console.log("MOUSE-DIST:", JSON.stringify(mouseDist));
+        // console.log("EDGE-MIN-LENTGH:", edgeMinLength);
+        // console.log("CONNECTIONS-0",);
+        // console.log("CONNECTIONS-0-start", connections[0].nodeStart);
+      }
+      if (closestEdge && closestEdgeDist < 10) {
+        edgeSelected = true;
+        selectedEdge = closestEdge;
+        redrawCanvas();
+        drawSelectedEdge(closestEdge.start[0], closestEdge.start[1], closestEdge.end[0], closestEdge.end[1]);
+      } else {
+        edgeSelected = false;
+        selectedEdge = null;
+        redrawCanvas();
+      }
+      // nodeKeys.forEach((key) => {
+      //   const [nodeX, nodeY] = key.split(",").map((coordinate) => Number(coordinate));
+
+      //   let lineDist = Math.hypot(mouseX - nodeX, mouseY - nodeY);
+      //   if (lineDist < 12) {
+      //     console.log("LINE DISTANCE:", lineDist);
+      //     clickedOnNode = true;
+      //     redrawCanvas();
+      //   }
+      // })
+    }
 
     hasDragged = false;
 
@@ -261,6 +455,12 @@ const createVisualizationPlane = () => {
     const { viewportX, viewportY } = getCanvasPos(event);
     const snapPos = {};
     const distance = 0;
+
+    mouseX = event.clientX - bounds.left;
+    mouseY = event.clientY - bounds.top;
+    // const nodeKeys = nodesMap.keys()
+    // console.log("nodeKeys:", nodeKeys);
+    // console.log("MOUSE:", mouseX, mouseY);
 
     if (!isDrawing) return;
 
@@ -307,6 +507,13 @@ const createVisualizationPlane = () => {
       snapPos.snapStartX = tempDistArr[smallVal].startX;
       snapPos.snapStartY = tempDistArr[smallVal].startY;
     }
+    let lineDist = 0;
+    let newLineDist = 0;
+    lineDist = Math.hypot(endViewportX - dragStartX, endViewportY - dragStartY);
+    if (lineDist > 350) {
+      endViewportX = dragStartX + ((endViewportX - dragStartX) / lineDist) * 350;
+      endViewportY = dragStartY + ((endViewportY - dragStartY) / lineDist) * 350;
+    };
 
     context.beginPath();
     // context.moveTo(startViewport.x, startViewport.y);
@@ -320,6 +527,8 @@ const createVisualizationPlane = () => {
     // dragStartY = startViewport.y;
     dragStartX = snapPos.snapStartX;
     dragStartY = snapPos.snapStartY;
+    // TODO: try lineDist should be shorter than 550.
+
     dragEndX = endViewportX;
     dragEndY = endViewportY;
 
@@ -333,10 +542,6 @@ const createVisualizationPlane = () => {
     const { viewportX, viewportY } = getCanvasPos(event);
 
     if (hasDragged) {
-      // TODO: try putting nodeMap.get(posKey(dragStartX, dragStartY)) as argument for createHyperEdge
-      // if () {
-
-      // }
       const tempDistArr = {};
       let tempDist = 0;
 
@@ -356,14 +561,13 @@ const createVisualizationPlane = () => {
         // console.log("existingEdge:", existingEdge);
 
         if (tempDist < 20 && !existingEdge) {
-          console.log("IT'S CLOSE:", tempDist);
           context.moveTo(dragStartX, dragStartY);
           context.lineTo(pos.startX, pos.startY);
           context.strokeStyle = CONFIG.selectedStrokeColor;
           context.lineWidth = CONFIG.defaultEdgeWidth;
           context.stroke();
           createHyperEdge(nodesMap.get(posKey(dragStartX, dragStartY)), pos.startX, pos.startY);
-          connections.push({ "nodeStart": [dragStartX, dragStartY], "nodeEnd": [pos.startX, pos.startY] })
+          connections.push({ "nodeStart": [dragStartX, dragStartY], "nodeEnd": [pos.startX, pos.startY] });
           redrawCanvas();
           hasDragged = false;
 
@@ -384,13 +588,14 @@ const createVisualizationPlane = () => {
         tempDistArr[tempDist] = pos;
       })
 
-      // TODO: look at snapPosition for pos.startX
       snapPosition.forEach((pos, index) => {
         tempDist = Math.hypot(dragEndX - pos.startX, dragEndY - pos.startY);
         // tempDistArr.push({[tempDist]: pos});
         tempDistArr[tempDist] = pos;
       })
+
       const smallVal = Math.min(...Object.keys(tempDistArr));
+
       console.log("SMALL-VALL", smallVal);
       if (hasDragged === true && smallVal > 20) {
         drawNode(dragEndX, dragEndY);
@@ -401,9 +606,9 @@ const createVisualizationPlane = () => {
         snapPosition.push({ "startX": dragEndX, "startY": dragEndY });
         // console.log("snap", snapPosition);
         // console.log("KEYS:", nodesMap.keys());
-        console.log("KEYS:", [...hypergraph.keys()]);
-        console.log("NODES-MAP:", nodesMap.get(posKey(dragStartX, dragStartY)));
-        console.log("NODES-MAP-2:", nodesMap.get(posKey(dragEndX, dragEndY)));
+        // console.log("KEYS:", [...hypergraph.keys()]);
+        // console.log("NODES-MAP:", nodesMap.get(posKey(dragStartX, dragStartY)));
+        // console.log("NODES-MAP-2:", nodesMap.get(posKey(dragEndX, dragEndY)));
         // hypergraph
         //  getHyperEdgesArray();
         //  getHyperNexus();
