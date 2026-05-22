@@ -1,5 +1,5 @@
 import createGraph from './hypergraph.js';
-import debug from './visualizationPlane2/debug.js';
+import debug from './debug.js';
 
 // const edges = createGraph().getEdges;
 // const hypergraph = createGraph().nodeConnect;
