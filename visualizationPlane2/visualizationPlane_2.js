@@ -2,6 +2,7 @@
 // const graph = createGraph();
 import createGraph from '../hypergraph.js';
 import debug from './debug.js';
+import iterateHypergraph from '../iterateHypergraph.js'
 
 const createVisualizationPlane = () => {
   const Debugger = debug();
@@ -561,12 +562,14 @@ const createVisualizationPlane = () => {
         // console.log("existingEdge:", existingEdge);
 
         if (tempDist < 20 && !existingEdge) {
+          // debugger;
           context.moveTo(dragStartX, dragStartY);
           context.lineTo(pos.startX, pos.startY);
           context.strokeStyle = CONFIG.selectedStrokeColor;
           context.lineWidth = CONFIG.defaultEdgeWidth;
           context.stroke();
-          createHyperEdge(nodesMap.get(posKey(dragStartX, dragStartY)), pos.startX, pos.startY);
+          // createHyperEdge(nodesMap.get(posKey(dragStartX, dragStartY)), pos.startX, pos.startY);
+          createHyperEdge(nodesMap.get(posKey(dragStartX, dragStartY)), nodesMap.get(posKey(pos.startX, pos.startY)));
           connections.push({ "nodeStart": [dragStartX, dragStartY], "nodeEnd": [pos.startX, pos.startY] });
           redrawCanvas();
           hasDragged = false;
@@ -630,6 +633,20 @@ const createVisualizationPlane = () => {
     console.log("==================== BOTTOM LOGS ====================");
     console.log("=====================================================");
     console.log(Debugger(hypergraph));
+    // console.log("ITERATE:", iterateHypergraph());
+    // const getNodes = (hypergraph) => {
+    //   const graphNodes = [...hypergraph.keys()];
+    //   return graphNodes;
+    // };
+
+    // const getEdges = (hypergraph) => {
+    //   const graphEdges = [...hypergraph.values()];
+    //   return graphEdges;
+    // };
+    iterateHypergraph(graph, {
+      nodeCallback: (node) => { console.log(`THIS IS THE NODE`) },
+      edgeCallback: (node1, node2) => { console.log(`THIS IS THE EDGE`) }
+    });
   });
 
 
