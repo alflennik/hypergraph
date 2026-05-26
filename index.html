@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visualization Plane</title>
+    <style>
+      html,
+      body,
+      h1 {
+        margin: 0;
+      }
+
+      body {
+        background-color: black;
+        color: white;
+        font-family: sans-serif;
+      }
+
+      header {
+        height: 0;
+        width: 100vw;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+      }
+
+      .header-content {
+        margin-top: 75px;
+        padding: 10px 20px;
+        border-radius: 30px;
+        background-color: #301fe6;
+      }
+
+      h1 {
+        font-size: 21px;
+      }
+
+      canvas {
+        margin: 10px;
+        background-color: rgb(27, 29, 27);
+        display: block;
+        width: calc(100vw - 20px);
+        height: calc(100dvh - 20px);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-content"><h1>Visualization Plane</h1></div>
+    </header>
+
+    <canvas></canvas>
+
+    <script type="module" src="visualizationPlane.js"></script>
+  </body>
+</html>

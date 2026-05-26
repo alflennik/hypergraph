@@ -1,8 +1,9 @@
 // const util = require('util');
 // Usage:
 // console.log(util.inspect(testNode2, { depth: null, colors: true }));
+// import Debugger from "/debugger";
 
-const CreateGraph = () => {
+const createHyperGraph = () => {
   const nodeConnect = new Map();
   const nexus = { "nexus": "nexus" };
 
@@ -159,8 +160,7 @@ const CreateGraph = () => {
     createEdge,
     getEdges,
     deleteEdge,
-    nodeConnect
   };
 }
 
-export default CreateGraph;
+export default createHyperGraph;
