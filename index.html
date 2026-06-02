@@ -4,56 +4,63 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Visualization Plane</title>
-    <style>
-      html,
-      body,
-      h1 {
-        margin: 0;
-      }
-
-      body {
-        background-color: black;
-        color: white;
-        font-family: sans-serif;
-      }
-
-      header {
-        height: 0;
-        width: 100vw;
-        box-sizing: border-box;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-      }
-
-      .header-content {
-        margin-top: 75px;
-        padding: 10px 20px;
-        border-radius: 30px;
-        background-color: #301fe6;
-      }
-
-      h1 {
-        font-size: 21px;
-      }
-
-      canvas {
-        margin: 10px;
-        background-color: rgb(27, 29, 27);
-        display: block;
-        width: calc(100vw - 20px);
-        height: calc(100dvh - 20px);
-      }
-    </style>
+    <link rel="stylesheet" href="style.css"/>
   </head>
   <body>
     <header>
       <div class="header-content"><h1>Visualization Plane</h1></div>
     </header>
+    <aside class="palette">
+      <ul>
+        <li>
+          <button class="selected" type="button" title="Line Tool">
+            <span class="screen-reader-only">Line Tool</span>
+            <!-- prettier-ignore -->
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" width="64" height="64" viewBox="0 0 24 24" style="color: white;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0M16 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0M7.5 16.5l9-9"></path></svg>
+          </button>
+        </li>
+        <li>
+          <button type="button" title="Hand Tool">
+            <span class="screen-reader-only">Hand Tool</span>
+            <!-- prettier-ignore -->
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" width="64" height="64" viewBox="0 0 24 24" style="color: rgb(255, 255, 255);"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M4 10.059v3.424c0 1.853 0 2.78.221 3.536c.527 1.8 1.935 3.216 3.735 3.846c.6.176 1.196.363 2.344.532a5.8 5.8 0 0 0 2.014-.066c.303-.062.55-.115.758-.16c.49-.106.98-.233 1.43-.454c.508-.248.903-.506 1.475-.933c.342-.255.655-.566 1.28-1.188l3.247-3.23a1.68 1.68 0 0 0 0-2.384a1.7 1.7 0 0 0-2.396 0l-2.25 2.239v-5.162"></path><path d="M12.893 7.852V5.95c0-.815.664-1.475 1.483-1.475c.818 0 1.482.66 1.482 1.475v4.424m-5.929-.319V3.95c0-.815.664-1.475 1.482-1.475c.819 0 1.482.66 1.482 1.475v6.109M6.964 7.32v2.739v-5.104a1.483 1.483 0 0 1 2.965 0v5.104M6.964 8.854V7.95c0-.815-.663-1.475-1.482-1.475C4.664 6.475 4 7.135 4 7.95v2.738"></path></g>
+            </svg>
+          </button>
+        </li>
+        <li>
+          <button type="button" title="Line Tool">
+            <span class="screen-reader-only">Move Tool</span>
+            <!-- prettier-ignore -->
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" width="64" height="64" viewBox="0 0 24 24" style="color: white;"><path fill="currentColor" d="M9.47 6.53a.75.75 0 0 0 1.06 0l.72-.72v5.44H5.81l.72-.72a.75.75 0 1 0-1.06-1.06l-2 2a.75.75 0 0 0 0 1.06l2 2a.75.75 0 0 0 1.06-1.06l-.72-.72h5.44v5.44l-.72-.72a.75.75 0 1 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l2-2a.75.75 0 1 0-1.06-1.06l-.72.72v-5.44h5.44l-.72.72a.75.75 0 1 0 1.06 1.06l2-2a.75.75 0 0 0 0-1.06l-2-2a.75.75 0 1 0-1.06 1.06l.72.72h-5.44V5.81l.72.72a.75.75 0 1 0 1.06-1.06l-2-2a.75.75 0 0 0-1.06 0l-2 2a.75.75 0 0 0 0 1.06"></path></svg>
+          </button>
+        </li>
+        <li>
+          <button type="button" title="Line Tool">
+            <span class="screen-reader-only">Zoom-In Tool</span>
+            <!-- prettier-ignore -->
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" width="64" height="64" viewBox="0 0 24 24" style="color: white;"><g fill="none" stroke="currentColor" stroke-width="2"><path d="M16 10a6 6 0 1 1-12 0a6 6 0 0 1 12 0Z"></path><path stroke-linecap="round" d="m20 20l-5-5m-7.5-5H10m0 0h2.5M10 10v2.5m0-2.5V7.5"></path></g></svg>
+          </button>
+        </li>
+        <li>
+          <button type="button" title="Line Tool">
+            <span class="screen-reader-only">Zoom-Out Tool</span>
+            <!-- prettier-ignore -->
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" width="64" height="64" viewBox="0 0 24 24" style="color: white;"><g fill="none" stroke="currentColor" stroke-width="2"><path d="M16 10a6 6 0 1 1-12 0a6 6 0 0 1 12 0Z"></path><path stroke-linecap="round" d="m20 20l-5-5m-7.5-5h5"></path></g></svg>
+          </button>
+        </li>
+        <li>
+          <button type="button" title="Line Tool">
+            <span class="screen-reader-only">Eraser Tool</span>
+            <!-- prettier-ignore -->
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" width="64" height="64" viewBox="0 0 16 16" style="color: white;"><path fill="currentColor" d="M14.5 6c0-.4-.156-.777-.439-1.061l-2.999-3c-.566-.567-1.558-.567-2.122 0l-7.501 7.5A1.5 1.5 0 0 0 1 10.5c0 .401.156.777.439 1.061l2 2c.283.283.66.439 1.061.439h7a.5.5 0 0 0 0-1H8.121l5.939-5.939A1.5 1.5 0 0 0 14.499 6zM4.146 12.854l-2-2a.5.5 0 0 1 0-.708L4.293 8L8 11.707L6.707 13H4.5a.5.5 0 0 1-.354-.146m9.208-6.5L8.708 11L5.001 7.293l4.647-4.647a.5.5 0 0 1 .707 0l3 3a.5.5 0 0 1-.001.708"></path></svg>
+          </button>
+        </li>
+      </ul>
+    </aside>
 
     <canvas></canvas>
 
     <script type="module" src="visualizationPlane.js"></script>
   </body>
 </html>
+<!--eraser-->

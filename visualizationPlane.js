@@ -1,4 +1,6 @@
 import createHypergraph from "/hypergraph.js";
+import "/tools.js"
+import createInteractionService from "/interactionService.js"
 // getNexus,
 // createNode,
 // createEdge,
@@ -9,6 +11,8 @@ import createHypergraph from "/hypergraph.js";
 const createVisualizationPlane = () => {
   const canvas = document.querySelector('canvas');
   const context = canvas.getContext("2d");
+
+  const interactionService = createInteractionService({canvas});
 
   let points = [{ x: 100, y: 50 }];
 
@@ -32,9 +36,9 @@ const createVisualizationPlane = () => {
     });
   };
   // const { viewportX, viewportY } = getCanvasPos(event);
-
-  canvas.addEventListener('mouseup', (event) => {
-    points.push({ x: event.clientX, y: event.clientY });
+  interactionService.clickedEmptyCanvas(({x, y}) => {
+    // points.push({ x, y });
+    points.push({ x, y });
     redrawCanvas();
   });
 
