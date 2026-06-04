@@ -1,6 +1,7 @@
 import createHypergraph from "/hypergraph.js";
 import "/tools.js"
 import createInteractionService from "/interactionService.js"
+import createCanvasService from "/canvasService.js"
 // getNexus,
 // createNode,
 // createEdge,
@@ -12,19 +13,10 @@ const createVisualizationPlane = () => {
   const canvas = document.querySelector('canvas');
   const context = canvas.getContext("2d");
 
-  const interactionService = createInteractionService({canvas});
+  const canvasService = createCanvasService({canvas, context});
+  const interactionService = createInteractionService({canvas, canvasService});
 
   let points = [{ x: 100, y: 50 }];
-
-  const drawPoint = (x, y,) => {
-    context.beginPath();
-    context.shadowColor = "red";
-    context.shadowBlur = 15;
-    context.arc(x, y, 10, 0, 2 * Math.PI);
-    context.fillStyle = "red";
-    context.fill();
-    // context.stroke();
-  };
 
   const redrawCanvas = () => {
     const currentSize = canvas.getBoundingClientRect();
@@ -32,12 +24,11 @@ const createVisualizationPlane = () => {
     canvas.height = currentSize.height;
 
     points.forEach((point) => {
-      drawPoint(point.x, point.y);
+      canvasService.drawPoint(point.x, point.y);
     });
   };
-  // const { viewportX, viewportY } = getCanvasPos(event);
-  interactionService.clickedEmptyCanvas(({x, y}) => {
-    // points.push({ x, y });
+
+  interactionService.clickedAnywhere(({x, y}) => {
     points.push({ x, y });
     redrawCanvas();
   });
