@@ -3,14 +3,12 @@
 // console.log(util.inspect(testNode2, { depth: null, colors: true }));
 // import Debugger from "/debugger";
 
-const createHyperGraph = () => {
+const createHypergraph = () => {
   const nodeConnect = new Map();
   const nexus = { "nexus": "nexus" };
 
   // Initializing nodeConnect with one edge
   nodeConnect.set(nexus, []);
-  // console.log("KEY", Object.keys(nexus)[0]);
-  // console.log("KEY", Object.values(nexus));
 
   // Thank Claude for this Fisher-Yates algorithm
   const shuffle = (arr) => {
@@ -26,49 +24,21 @@ const createHyperGraph = () => {
     return nexus;
   };
 
-  // console.log("nexus:", getNexus());
+  const createEdgeFrom = (startNode, {debuggingName} = {}) => {
+    let newNode;
+    if (debuggingName) {
+      newNode = { debuggingName };
+    } else {
+      newNode = {};
+    };
 
-  const createNode = (nodeName) => {
-    const newNode = { [nodeName]: nodeName };
-    // const nodeExists = nodeConnect.get(node);
-
-    // if (!nodeExists) {
-    //   console.log("DOESN'T EXIST");
-    //   throw new Error("Node does not exist");
-    // }
-
-    // console.log("EXISTS");
-
-    // const nodeValues = nodeConnect.get(node);
-    // nodeConnect.set(node, nodeValues.concat(newNode));
-
-    nodeConnect.set(newNode, []);
+    nodeConnect.set(newNode, [startNode]);
+    nodeConnect.set(startNode, [...nodeConnect.get(startNode), newNode]);
 
     return newNode;
   };
-  // const createNode = (node, nodeName) => {
-  //   const newNode = { [nodeName]: nodeName };
-  //   const nodeExists = nodeConnect.get(node);
 
-  //   if (!nodeExists) {
-  //     console.log("DOESN'T EXIST");
-  //     throw new Error("Node does not exist");
-  //   }
-
-  //   console.log("EXISTS");
-
-  //   const nodeValues = nodeConnect.get(node);
-  //   nodeConnect.set(node, nodeValues.concat(newNode));
-
-  //   nodeConnect.set(newNode, [node]);
-
-  //   return newNode;
-  // };
-
-
-
-
-  const createEdge = (node1, node2) => {
+  const createEdgeBetween = (node1, node2) => {
     const keys = [...nodeConnect.keys()];
 
     if (!keys.includes(node1) || !keys.includes(node2)) {
@@ -156,11 +126,11 @@ const createHyperGraph = () => {
 
   return {
     getNexus,
-    createNode,
-    createEdge,
+    createEdgeFrom,
+    createEdgeBetween,
     getEdges,
     deleteEdge,
   };
 }
 
-export default createHyperGraph;
+export default createHypergraph;

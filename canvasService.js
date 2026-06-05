@@ -1,4 +1,4 @@
-const createCanvasService = ({canvas, context}) => {
+const createCanvasService = ({ canvas, context }) => {
   const drawPoint = (x, y,) => {
     context.beginPath();
     context.shadowColor = "red";
@@ -8,6 +8,16 @@ const createCanvasService = ({canvas, context}) => {
     context.fill();
     // context.stroke();
   };
+
+  const drawLine = (startCoordinates, endCoordinates) => {
+    context.beginPath();
+    context.moveTo(startCoordinates.x, startCoordinates.y);
+    context.lineTo(endCoordinates.x, endCoordinates.y);
+    context.lineWidth = 1;
+    context.strokeStyle = "white";
+    context.shadowBlur = 0;
+    context.stroke();
+  }
 
   const getEventCoordinates = (event) => {
     const currentSize = canvas.getBoundingClientRect();
@@ -22,9 +32,9 @@ const createCanvasService = ({canvas, context}) => {
     const deltaY = coordinate1.y - coordinate2.y;
 
     return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-  }
+  };
 
-  return {getEventCoordinates, drawPoint, getDistance}
+  return { getEventCoordinates, drawPoint, getDistance, drawLine }
 };
 
 export default createCanvasService;
