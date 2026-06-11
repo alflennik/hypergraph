@@ -13,14 +13,26 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     listeners.draggedAnywhere = callback;
   };
 
+  const draggingFromNode = (callback) => {
+    listeners.draggingFromNode = callback;
+  };
+
+  const draggedFromNode = (callback) => {
+    listeners.draggedFromNode = callback;
+  };
+
   let isClicking = false;
-  let mouseDownCoordinates = null;
+  let mouseDownCoordinate = null;
+  let mouseDownNode = null;
   let isDragging = false;
 
   canvas.addEventListener('mousedown', (event) => {
     isClicking = true;
 
-    mouseDownCoordinates = canvasService.getEventCoordinates(event);
+    mouseDownCoordinate = canvasService.getEventCoordinate(event);
+    const clickedNode = canvasService.findClickedNode(mouseDownCoordinate);
+    
+    mouseDownNode = clickedNode;
   });
 
   canvas.addEventListener('mousemove', (event) => {
@@ -28,35 +40,49 @@ const createInteractionsService = ({ canvas, canvasService }) => {
       return;
     }
     const dragThreshold = 10;
-    const currentCoordinates = canvasService.getEventCoordinates(event);
+    const currentCoordinate = canvasService.getEventCoordinate(event);
 
-    const dragDistance = canvasService.getDistance(mouseDownCoordinates, currentCoordinates);
+    const dragDistance = canvasService.getDistance(mouseDownCoordinate, currentCoordinate);
 
     if (dragDistance > dragThreshold) {
       isDragging = true;
     };
 
     if (isDragging) {
-      listeners.draggingAnywhere?.(mouseDownCoordinates, currentCoordinates);
+      listeners.draggingAnywhere?.(mouseDownCoordinate, currentCoordinate);
+
+      if (mouseDownNode) {
+        listeners.draggingFromNode?.(mouseDownNode, currentCoordinate);
+      } else {
+        // TODO: Implement the following:
+        // listeners.draggingFromEmptyCanvas(currentCoordinate);
+      }
     };
 
   });
 
   canvas.addEventListener('mouseup', (event) => {
-    const currentCoordinates = canvasService.getEventCoordinates(event);
+    const currentCoordinate = canvasService.getEventCoordinate(event);
 
     if (isDragging) {
-      listeners.draggedAnywhere?.(mouseDownCoordinates, currentCoordinates);
+      listeners.draggedAnywhere?.(mouseDownCoordinate, currentCoordinate);
+
+      if (mouseDownNode) {
+        listeners.draggedFromNode?.(mouseDownNode, currentCoordinate);
+      } else {
+        // TODO: Implement the following:
+        // listeners.draggedFromEmptyCanvas(currentCoordinate);
+      }
     } else {
-      listeners.clickedAnywhere?.(currentCoordinates);
+      listeners.clickedAnywhere?.(currentCoordinate);
     };
 
     isClicking = false;
     isDragging = false;
-    mouseDownCoordinates = null;
+    mouseDownCoordinate = null;
   });
 
-  return { clickedAnywhere, draggingAnywhere, draggedAnywhere };
+  return { clickedAnywhere, draggingAnywhere, draggedAnywhere, draggingFromNode, draggedFromNode};
 }
 
 export default createInteractionsService;

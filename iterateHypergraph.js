@@ -11,20 +11,33 @@ import debug from './debug.js';
 const iterateHypergraph = (hypergraph, { nodeCallback, edgeCallback }) => {
   // debugger;
   const processedNodes = new WeakMap();
+  let stopIteration = false;
+
   const recurse = (node) => {
     processedNodes.set(node, true);
-    nodeCallback(node);
+
+    const iterationControl = nodeCallback?.(node);
+
+    if (iterationControl?.stopIteration) {
+      stopIteration = true;
+      return;
+    };
 
     const connectedNodes = hypergraph.getEdges(node);
 
     connectedNodes.forEach((connectedNode) => {
-      if (!processedNodes.get(connectedNode)) {
-        edgeCallback(node, connectedNode);
+      if (!processedNodes.get(connectedNode) && !stopIteration) {
+        const iterationControl = edgeCallback?.(node, connectedNode);
+        
+        if (iterationControl?.stopIteration) {
+          stopIteration = true;
+          return;
+        };
       }
     });
 
     connectedNodes.forEach((connectedNode) => {
-      if (!processedNodes.get(connectedNode)) {
+      if (!processedNodes.get(connectedNode) && !stopIteration) {
         recurse(connectedNode);
       }
     });
