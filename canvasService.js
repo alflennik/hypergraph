@@ -26,10 +26,16 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
 
   const drawPoint = (x, y) => {
     context.beginPath();
-    context.fillStyle = '#50dc3b';
-    context.shadowColor = '#a3f697';
-    context.shadowBlur = 3;
+    context.fillStyle = '#4ee238';
+    context.shadowColor = '#81b47b';
+    context.shadowBlur = 4;
     context.arc(x, y, 4, 0, 2 * Math.PI);
+    context.fill();
+    
+    context.beginPath();
+    context.fillStyle = 'white';
+    context.shadowBlur = 0;
+    context.arc(x, y, 3, 0, 2 * Math.PI);
     context.fill();
   };
 
@@ -38,8 +44,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.moveTo(startCoordinate.x, startCoordinate.y);
     context.lineTo(endCoordinate.x, endCoordinate.y);
     context.strokeStyle = '#a3f697';
-    context.shadowColor = '#a6bfa3';
-
+    context.shadowColor = '#81b47b';
     context.lineWidth = 2;
     context.shadowBlur = 4;
     context.stroke();
