@@ -68,6 +68,21 @@ const createVisualizationPlane = () => {
     redrawCanvas();
   });
 
+  interactionService.draggingBetweenNodes((startNode, endNode) => {
+    redrawCanvas();
+
+    const { coordinate: startCoordinate } = nodeData.get(startNode);
+    const { coordinate: endCoordinate } = nodeData.get(endNode);
+
+    canvasService.drawLine(startCoordinate, endCoordinate);
+  });
+
+  interactionService.draggedBetweenNodes((startNode, endNode) => {
+    hypergraph.createEdgeBetween(startNode, endNode);
+
+    redrawCanvas();
+  });
+
   window.addEventListener('resize', () => {
     redrawCanvas();
   });

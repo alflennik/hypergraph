@@ -8,7 +8,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   };
 
-  const findClickedNode = (clickedCoordinate) => {
+  const findNodeAtCoordinate = (clickedCoordinate) => {
     let clickedNode;
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
@@ -29,13 +29,13 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.fillStyle = '#4ee238';
     context.shadowColor = '#81b47b';
     context.shadowBlur = 4;
-    context.arc(x, y, 4, 0, 2 * Math.PI);
+    context.arc(x, y, 8, 0, 2 * Math.PI);
     context.fill();
     
     context.beginPath();
     context.fillStyle = 'white';
     context.shadowBlur = 0;
-    context.arc(x, y, 3, 0, 2 * Math.PI);
+    context.arc(x, y, 6, 0, 2 * Math.PI);
     context.fill();
   };
 
@@ -63,7 +63,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     drawPoint,
     getDistance,
     drawLine,
-    findClickedNode,
+    findNodeAtCoordinate,
   };
 };
 
