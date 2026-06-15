@@ -48,11 +48,11 @@ const createInteractionsService = ({ canvas, canvasService }) => {
       return;
     }
     const dragThreshold = 10;
-    const currentCoordinate = canvasService.getEventCoordinate(event);
+    const endCoordinate = canvasService.getEventCoordinate(event);
 
     const dragDistance = canvasService.getDistance(
       startCoordinate,
-      currentCoordinate,
+      endCoordinate,
     );
 
     if (dragDistance > dragThreshold) {
@@ -60,43 +60,43 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     }
 
     if (isDragging) {
-      listeners.draggingAnywhere?.(startCoordinate, currentCoordinate);
+      listeners.draggingAnywhere?.(startCoordinate, endCoordinate);
 
-      const currentNode = canvasService.findNodeAtCoordinate(currentCoordinate, {interactionType});
+      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, {interactionType});
 
       if (startNode) {
-        if (currentNode) {
-          listeners.draggingBetweenNodes?.(startNode, currentNode);
+        if (endNode) {
+          listeners.draggingBetweenNodes?.(startNode, endNode);
         } else {
-          listeners.draggingFromNode?.(startNode, currentCoordinate);
+          listeners.draggingFromNode?.(startNode, endCoordinate);
         }
       } else {
         // TODO: Implement the following:
-        // listeners.draggingFromEmptyCanvas(currentCoordinate);
+        // listeners.draggingFromEmptyCanvas(endCoordinate);
       }
     }
   };
 
   const endInteraction = (event, {interactionType}) => {
-    const currentCoordinate = canvasService.getEventCoordinate(event);
+    const endCoordinate = canvasService.getEventCoordinate(event);
 
     if (isDragging) {
-      listeners.draggedAnywhere?.(startCoordinate, currentCoordinate);
+      listeners.draggedAnywhere?.(startCoordinate, endCoordinate);
 
-      const currentNode = canvasService.findNodeAtCoordinate(currentCoordinate, {interactionType});
+      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, {interactionType});
 
       if (startNode) {
-        if (currentNode) {
-          listeners.draggedBetweenNodes?.(startNode, currentNode);
+        if (endNode) {
+          listeners.draggedBetweenNodes?.(startNode, endNode);
         } else {
-          listeners.draggedFromNode?.(startNode, currentCoordinate);
+          listeners.draggedFromNode?.(startNode, endCoordinate);
         }
       } else {
         // TODO: Implement the following:
-        // listeners.draggedFromEmptyCanvas(currentCoordinate);
+        // listeners.draggedFromEmptyCanvas(endCoordinate);
       }
     } else {
-      listeners.clickedAnywhere?.(currentCoordinate);
+      listeners.clickedAnywhere?.(endCoordinate);
     }
 
     isClicking = false;

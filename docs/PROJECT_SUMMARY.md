@@ -1,6 +1,6 @@
 # hyper-visual — Project Summary
 
-> **Last updated:** 2026-05-22
+> **Last updated:** 2026-06-13
 
 > **Living document.** This file should be reviewed and updated (if necessary)
 > by the AI agent after every use of the **context-loading-strategy** skill.
@@ -11,24 +11,20 @@
 
 ## Project Overview
 
-Browser-based hypergraph visualization experiment. The long-term goal is an
-interactive 2D canvas where users draw edges, nodes snap together, and the
-structure is stored as a hypergraph (Map-based adjacency with a permanent
-**Nexus** root node).
-
-**Current state:** Mid-restructure. The full canvas app was removed in commit
-`a9997fb`. On disk today: the hypergraph data layer, traversal utility, debug
-helpers, and a minimal canvas stub. The richer UI lives in git history
-(pre-restructure).
+Browser-based **hypergraph editor** that stores nodes and edges in memory
+(Map-based adjacency with a permanent **Nexus** root) and renders them on an
+HTML5 Canvas. Users drag from existing nodes to create new connected nodes or
+link nodes together. A left tool palette provides visual UI only (no tool logic
+wired yet).
 
 ## Tech Stack
 
 | Layer | Choice |
 |-------|--------|
-| Languages | HTML5, CSS, vanilla JavaScript (ES modules) |
+| Languages | HTML5, CSS3 (nested selectors), vanilla JavaScript (ES modules) |
 | Rendering | Canvas 2D API |
-| Libraries | None |
-| Build | No build step — no bundler, no `package.json` |
+| Libraries | None — no `package.json`, bundler, or runtime npm deps |
+| Build | No build step |
 | Dev server | `npx live-server` |
 
 ## How to Run
@@ -45,43 +41,50 @@ required — `file://` will not work.
 
 | Path | Role |
 |------|------|
-| `index.html` | Page shell: header, full-viewport canvas, inline CSS |
-| `visualizationPlane.js` | Canvas stub — draws one red circle; hypergraph not wired |
+| `index.html` | Page shell: header, tool palette, full-viewport canvas |
+| `style.css` | Layout, dark theme, palette styling |
+| `visualizationPlane.js` | Composition root — wires services, redraw loop, interactions |
 | `hypergraph.js` | Hypergraph factory: Map adjacency, Nexus, node/edge CRUD |
 | `iterateHypergraph.js` | DFS traversal with `nodeCallback` / `edgeCallback` |
+| `canvasService.js` | Drawing primitives, coordinate mapping, hit-testing |
+| `interactionService.js` | Pointer input (mouse/touch) with subscribe API |
+| `tools.js` | Side-effect palette button selection (visual only) |
 | `debug.js` | `safeStringify()` for circular refs, Maps, Sets |
 | `README.md` | Title + live-server command |
-| `context/` | Gitignored local notes and archived project summary |
+| `context/` | Gitignored local notes (`how-it-works.md`) |
+| `docs/` | This file — architecture reference, not loaded by app |
 
-**Removed in restructure (`a9997fb`), recoverable from git:**
-
-- `visualizationPlane.html`, `visualizationPlane.css`, full `visualizationPlane.js` (~698 lines)
-- `visualizationPlane2/` — HTML, CSS, JS (~663 lines), local `debug.js`
-- Previous `docs/` tree
+Flat root layout — no `src/`, `lib/`, or `tests/` directories.
 
 ## Architecture
 
-### Module graph (current)
+### Module graph
 
 ```
 index.html
-  └── visualizationPlane.js  (stub)
-        └── hypergraph.js    (imported but unused)
+  ├── style.css
+  └── visualizationPlane.js          ← entry point
+        ├── hypergraph.js
+        ├── tools.js                   (side effect)
+        ├── interactionService.js
+        ├── canvasService.js
+        │     └── iterateHypergraph.js
+        └── iterateHypergraph.js
 
 iterateHypergraph.js
-  ├── hypergraph.js          (imported but unused in module body)
-  └── debug.js               (imported but unused)
+  ├── hypergraph.js    (imported, unused in body)
+  └── debug.js         (imported, unused in body)
 
-debug.js                     (standalone utility)
+debug.js               (standalone, unused at runtime)
 ```
 
 ### `hypergraph.js`
 
-`createHyperGraph()` returns a closure over `nodeConnect: Map<nodeObj, nodeObj[]>`:
+`createHypergraph()` returns a closure over `nodeConnect: Map<nodeObj, nodeObj[]>`:
 
 - `getNexus()` — root node `{ nexus: "nexus" }`
-- `createNode(nodeName)` — creates `{ [name]: name }`, registers with `[]` adjacency
-- `createEdge(node1, node2)` — bidirectional adjacency; guards duplicates
+- `createEdgeFrom(startNode, { debuggingName }?)` — new node + bidirectional edge
+- `createEdgeBetween(node1, node2)` — bidirectional edge with duplicate guards
 - `getEdges(node)` — shuffled copy of neighbors (Fisher-Yates)
 - `deleteEdge(node1, node2)` — removes from `node1` only (incomplete)
 
@@ -89,49 +92,61 @@ Nodes are **object identity keys**, not strings or indices.
 
 ### `iterateHypergraph.js`
 
-DFS from `hypergraph.getNexus()`. Uses a `WeakMap` for visited tracking. Expects
-the graph API object (`.getEdges()`, `.getNexus()`), not the raw Map.
+DFS from `hypergraph.getNexus()`. Uses a `WeakMap` for visited tracking.
+Supports cooperative stop via `{ stopIteration: true }` from callbacks.
+Nodes unreachable from Nexus are never visited.
 
-### Historical: v1 vs v2 (git, pre-`a9997fb`)
+### `canvasService.js`
 
-| Aspect | v1 (`visualizationPlane.js`) | v2 (`visualizationPlane2/`) |
-|--------|------------------------------|-----------------------------|
-| Module system | CommonJS + IIFE | ES modules |
-| Data model | Spatial arrays (`nodes[]`, `edges[]`) | Dual: hypergraph Map + `nodesMap` (screen pos → node) |
-| Features | Full: pan/zoom, draw/select/delete, subtree drag | Partial port; much redraw code commented out |
-| Traversal | Did not use `iterateHypergraph` | Wired on mouseup via `iterateHypergraph` |
+Factory `createCanvasService({ canvas, context, hypergraph, nodeData })` provides
+`drawPoint`, `drawLine`, `getEventCoordinate`, `findNodeAtCoordinate`, and
+`getDistance`. Hit-testing walks the full graph (O(n) per event).
+
+### `interactionService.js`
+
+Factory `createInteractionsService({ canvas, canvasService })` — note export
+name vs import alias `createInteractionService` in `visualizationPlane.js`.
+Exposes registrar methods: `clickedAnywhere`, `draggingAnywhere`,
+`draggedAnywhere`, `draggingFromNode`, `draggedFromNode`, `draggingBetweenNodes`,
+`draggedBetweenNodes`. Drag threshold: 10px.
+
+### `visualizationPlane.js`
+
+Owns shared state: `hypergraph` and `nodeData` (`WeakMap<node, { coordinate }>`).
+Positions Nexus at canvas center on startup (not recentered on resize).
+Registers interaction callbacks for node creation and edge linking.
 
 ## Data Flow
 
-### Intended flow (v2 design, from git)
+1. `index.html` loads `visualizationPlane.js` → `createVisualizationPlane()`.
+2. Nexus placed at canvas center in `nodeData`.
+3. `redrawCanvas()` resets context, resizes backing store, walks graph via
+   `iterateHypergraph` to draw nodes (green circles) and edges (green lines).
+4. **Drag from node to empty space:** `draggedFromNode` → `createEdgeFrom` +
+   store coordinates in `nodeData` → `redrawCanvas`.
+5. **Drag between nodes:** `draggedBetweenNodes` → `createEdgeBetween` →
+   `redrawCanvas`.
+6. **Resize:** `window.resize` → `redrawCanvas()` only (Nexus coords unchanged).
 
-1. `createGraph()` seeds Nexus in the adjacency Map.
-2. Nexus placed on canvas via `nodesMap.set(posKey(cx, cy), nexus)`.
-3. User draws edge → look up/create nodes by screen position → `createHyperEdge`.
-4. `iterateHypergraph(graph, callbacks)` walks from Nexus for render/debug.
-5. Canvas draws from stored positions (v2 had much of this commented out).
-
-### Current flow (on disk)
-
-1. `index.html` loads `visualizationPlane.js`.
-2. Stub draws one static red circle — no hypergraph, no iteration, no input.
+No server — entirely client-side.
 
 ## Styling
 
-**Current:** Inline styles in `index.html` — black body, white text, 40px header,
-canvas fills `calc(100dvh - 60px)`, dark green-gray canvas background.
-
-**Historical:** Separate CSS files for v1/v2 with `#canvas-wrapper`, zoom toolbar
-styles (v2 toolbar commented out in HTML and CSS).
+`style.css`: dark theme, absolute-positioned header and left palette over canvas.
+Canvas fills `calc(100vw - 20px)` × `calc(100dvh - 20px)`, background
+`rgb(27, 29, 27)`. Palette `.selected` state toggled by `tools.js`.
 
 ## Known Issues
 
-- `visualizationPlane.js` imports hypergraph but never uses it
-- Import name mismatch: export is `createHyperGraph`, stub imports `createHypergraph`
-- `iterateHypergraph.js` has unused imports and an empty TODO block
-- `deleteEdge` only splices from `node1` — does not remove reverse edge from `node2`
-- `nodeConnect` no longer exported — breaks code expecting `graph.nodeConnect` (v2 relied on this)
-- `context/PROJECT_SUMMARY.md` is archival reference for the removed v1 app
+- `deleteEdge` only splices from `node1` — does not remove reverse edge
+- `startNode` not reset in `interactionService.endInteraction` — stale state
+- Unused imports in `iterateHypergraph.js` (`hypergraph`, `debug`)
+- Palette tools have no effect on canvas behavior
+- `draggedFromEmptyCanvas` not implemented (TODO in `interactionService.js`)
+- Nexus not recentered on window resize
+- `context/how-it-works.md` partially outdated vs current code
+- No self-edge guard when dragging node onto itself
+- O(n) hit-testing via full graph walk on every pointer move
 
 ## Key Dependencies
 
@@ -142,14 +157,25 @@ None at runtime. Dev-time only: `npx live-server`.
 No build step. Serve static files with any HTTP server. `.gitignore` excludes
 `context/` and issue-tracking files.
 
+## Historical Context
+
+Commit `a9997fb` removed the original full canvas app. The current codebase
+rebuilt a service-layer architecture (hypergraph + canvas + interaction) rather
+than restoring the pre-restructure monolith. Pre-restructure versions are
+recoverable from git (`visualizationPlane.js` @ `a9997fb^`,
+`visualizationPlane2/` @ `a9997fb^`).
+
 ## Quick reference — which file to open
 
 | Task | File |
 |------|------|
 | Hypergraph CRUD / adjacency | `hypergraph.js` |
 | Graph traversal / callbacks | `iterateHypergraph.js` |
-| Canvas entry / page layout | `index.html` |
-| Canvas rendering (current) | `visualizationPlane.js` |
+| Canvas drawing / hit-testing | `canvasService.js` |
+| Pointer input / drag events | `interactionService.js` |
+| App wiring / redraw loop | `visualizationPlane.js` |
+| Page layout / palette HTML | `index.html` |
+| Styles | `style.css` |
+| Palette UI (visual only) | `tools.js` |
 | Debug serialization | `debug.js` |
-| Full interactive canvas (historical) | git: `visualizationPlane.js` @ `a9997fb^` |
-| Hypergraph + canvas WIP | git: `visualizationPlane2/visualizationPlane_2.js` @ `a9997fb^` |
+| Developer notes | `context/how-it-works.md` |
