@@ -1,5 +1,5 @@
 import createHypergraph from '/hypergraph.js';
-import '/tools.js';
+import createTools from '/tools.js';
 import createInteractionService from '/interactionService.js';
 import createCanvasService from '/canvasService.js';
 import iterateHypergraph from '/iterateHypergraph.js';
@@ -15,14 +15,17 @@ const createVisualizationPlane = () => {
   const context = canvas.getContext('2d');
   const nodeData = new WeakMap();
 
-  // SERVICES
   const hypergraph = createHypergraph();
-  const canvasService = createCanvasService({ canvas, context, hypergraph, nodeData });
+  const canvasService = createCanvasService({
+    canvas,
+    context,
+    hypergraph,
+    nodeData,
+  });
   const interactionService = createInteractionService({
     canvas,
     canvasService,
   });
-
 
   (() => {
     const currentSize = canvas.getBoundingClientRect();
@@ -40,11 +43,15 @@ const createVisualizationPlane = () => {
 
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
-        const { coordinate } = nodeData.get(node);
+        const { coordinate, isSelected } = nodeData.get(node);
         canvasService.drawPoint(coordinate.x, coordinate.y);
+
+        if (isSelected) {
+          canvasService.drawPointSelection(coordinate);
+        };
       },
       edgeCallback: (node1, node2) => {
-        const { coordinate: startCoordinate} = nodeData.get(node1);
+        const { coordinate: startCoordinate } = nodeData.get(node1);
         const { coordinate: endCoordinate } = nodeData.get(node2);
 
         canvasService.drawLine(startCoordinate, endCoordinate);
@@ -52,35 +59,30 @@ const createVisualizationPlane = () => {
     });
   };
 
+  const tools = createTools({ hypergraph, canvasService, redrawCanvas, nodeData });
+
   interactionService.draggingFromNode((startNode, endCoordinate) => {
-    redrawCanvas();
-
-    const { coordinate: startCoordinate } = nodeData.get(startNode);
-
-    canvasService.drawLine(startCoordinate, endCoordinate);
+    tools.getCurrentTool().draggingFromNode?.(startNode, endCoordinate);
   });
 
   interactionService.draggedFromNode((startNode, endCoordinate) => {
-    const node = hypergraph.createEdgeFrom(startNode);
-
-    nodeData.set(node, { coordinate: endCoordinate });
-
-    redrawCanvas();
+    tools.getCurrentTool().draggedFromNode?.(startNode, endCoordinate);
   });
 
   interactionService.draggingBetweenNodes((startNode, endNode) => {
-    redrawCanvas();
-
-    const { coordinate: startCoordinate } = nodeData.get(startNode);
-    const { coordinate: endCoordinate } = nodeData.get(endNode);
-
-    canvasService.drawLine(startCoordinate, endCoordinate);
+    tools.getCurrentTool().draggingBetweenNodes?.(startNode, endNode);
   });
 
   interactionService.draggedBetweenNodes((startNode, endNode) => {
-    hypergraph.createEdgeBetween(startNode, endNode);
+    tools.getCurrentTool().draggedBetweenNodes?.(startNode, endNode);
+  });
 
-    redrawCanvas();
+  interactionService.draggingFromEmptyCanvas((startCoordinate, endCoordinate) => {
+    tools.getCurrentTool().draggingFromEmptyCanvas?.(startCoordinate, endCoordinate);
+  });
+
+  interactionService.draggedFromEmptyCanvas((startCoordinate, endCoordinate) => {
+    tools.getCurrentTool().draggedFromEmptyCanvas?.(startCoordinate, endCoordinate);
   });
 
   window.addEventListener('resize', () => {

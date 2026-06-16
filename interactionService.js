@@ -29,6 +29,14 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     listeners.draggedBetweenNodes = callback;
   };
 
+  const draggingFromEmptyCanvas = (callback) => {
+    listeners.draggingFromEmptyCanvas = callback;
+  };
+
+  const draggedFromEmptyCanvas = (callback) => {
+    listeners.draggedFromEmptyCanvas = callback;
+  };
+
   let isClicking = false;
   let startCoordinate = null;
   let startNode = null;
@@ -71,8 +79,7 @@ const createInteractionsService = ({ canvas, canvasService }) => {
           listeners.draggingFromNode?.(startNode, endCoordinate);
         }
       } else {
-        // TODO: Implement the following:
-        // listeners.draggingFromEmptyCanvas(endCoordinate);
+        listeners.draggingFromEmptyCanvas?.(startCoordinate, endCoordinate);
       }
     }
   };
@@ -92,8 +99,7 @@ const createInteractionsService = ({ canvas, canvasService }) => {
           listeners.draggedFromNode?.(startNode, endCoordinate);
         }
       } else {
-        // TODO: Implement the following:
-        // listeners.draggedFromEmptyCanvas(endCoordinate);
+        listeners.draggedFromEmptyCanvas?.(startCoordinate, endCoordinate);
       }
     } else {
       listeners.clickedAnywhere?.(endCoordinate);
@@ -139,6 +145,8 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     draggedFromNode,
     draggingBetweenNodes,
     draggedBetweenNodes,
+    draggingFromEmptyCanvas,
+    draggedFromEmptyCanvas
   };
 };
 
