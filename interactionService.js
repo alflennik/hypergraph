@@ -5,6 +5,14 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     listeners.clickedAnywhere = callback;
   };
 
+  const clickedEmptyCanvas = (callback) => {
+    listeners.clickedEmptyCanvas = callback;
+  };
+
+  const clickedNode = (callback) => {
+    listeners.clickedNode = callback;
+  };
+
   const draggingAnywhere = (callback) => {
     listeners.draggingAnywhere = callback;
   };
@@ -102,7 +110,13 @@ const createInteractionsService = ({ canvas, canvasService }) => {
         listeners.draggedFromEmptyCanvas?.(startCoordinate, endCoordinate);
       }
     } else {
-      listeners.clickedAnywhere?.(endCoordinate);
+      listeners.clickedAnywhere?.(startCoordinate);
+
+      if (startNode) {
+        listeners.clickedNode?.(startNode);
+      } else {
+        listeners.clickedEmptyCanvas?.(startCoordinate);
+      }
     }
 
     isClicking = false;
@@ -139,6 +153,8 @@ const createInteractionsService = ({ canvas, canvasService }) => {
 
   return {
     clickedAnywhere,
+    clickedNode,
+    clickedEmptyCanvas,
     draggingAnywhere,
     draggedAnywhere,
     draggingFromNode,

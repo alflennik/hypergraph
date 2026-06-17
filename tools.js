@@ -1,3 +1,5 @@
+import iterateHypergraph from './iterateHypergraph.js';
+
 const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
   const tools = {
     lineTool: {
@@ -32,9 +34,25 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
     moveTool: {
       draggingFromNode: (startNode, endCoordinate) => {
         const startNodeData = nodeData.get(startNode);
+        const { coordinate: startCoordinate } = startNodeData;
+
         nodeData.set(startNode, {
           ...startNodeData,
-          coordinate: endCoordinate,
+          isSelected: true,
+        });
+
+        const deltaX = startCoordinate.x - endCoordinate.x;
+        const deltaY = startCoordinate.y - endCoordinate.y;
+
+        iterateHypergraph(hypergraph, {
+          nodeCallback: (node) => {
+            const currentNodeData = nodeData.get(node);
+            const { coordinate, isSelected } = currentNodeData;
+
+            if (isSelected) {
+              nodeData.set(node, {...currentNodeData, coordinate: {x: coordinate.x - deltaX, y: coordinate.y - deltaY}});
+            }
+          },
         });
 
         redrawCanvas();
@@ -55,13 +73,39 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
 
         iterateHypergraph(hypergraph, {
           nodeCallback: (node) => {
-            const { coordinate } = nodeData.get(node);
+            const currentNodeData = nodeData.get(node);
+            const { coordinate } = currentNodeData;
 
-            if ((coordinate.x > left && coordinate.x < right) && (coordinate.y > top && coordinate.y < bottom)) {
-              
+            if (
+              coordinate.x > left &&
+              coordinate.x < right &&
+              coordinate.y > top &&
+              coordinate.y < bottom
+            ) {
+              nodeData.set(node, { ...currentNodeData, isSelected: true });
+            } else {
+              nodeData.set(node, { ...currentNodeData, isSelected: false });
             }
           },
         });
+
+        redrawCanvas();
+      },
+      clickedEmptyCanvas: () => {
+        iterateHypergraph(hypergraph, {
+          nodeCallback: (node) => {
+            const currentNodeData = nodeData.get(node);
+            nodeData.set(node, { ...currentNodeData, isSelected: false });
+          },
+        });
+
+        redrawCanvas();
+      },
+      clickedNode: (node) => {
+        const currentNodeData = nodeData.get(node);
+
+        const isSelected = !currentNodeData.isSelected;
+        nodeData.set(node, { ...currentNodeData, isSelected });
 
         redrawCanvas();
       },

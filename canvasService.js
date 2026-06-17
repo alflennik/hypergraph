@@ -76,6 +76,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.save();
     context.beginPath();
     context.strokeStyle = 'white';
+    context.lineWidth = 2;
     context.arc(coordinate.x, coordinate.y, 12, 0, 2 * Math.PI);
     context.stroke();
     context.restore();

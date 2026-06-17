@@ -61,6 +61,18 @@ const createVisualizationPlane = () => {
 
   const tools = createTools({ hypergraph, canvasService, redrawCanvas, nodeData });
 
+  interactionService.clickedAnywhere((coordinate) => {
+    tools.getCurrentTool().clickedAnywhere?.(coordinate);
+  });
+
+  interactionService.clickedEmptyCanvas((coordinate) => {
+    tools.getCurrentTool().clickedEmptyCanvas?.(coordinate);
+  });
+
+  interactionService.clickedNode((node) => {
+    tools.getCurrentTool().clickedNode?.(node);
+  });
+
   interactionService.draggingFromNode((startNode, endCoordinate) => {
     tools.getCurrentTool().draggingFromNode?.(startNode, endCoordinate);
   });
