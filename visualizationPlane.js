@@ -30,7 +30,7 @@ const createVisualizationPlane = () => {
   (() => {
     const currentSize = canvas.getBoundingClientRect();
     nodeData.set(hypergraph.getNexus(), {
-      coordinate: { x: currentSize.width / 2, y: currentSize.height / 2 },
+      coordinate: canvasService.createCoordinate({ viewportX: currentSize.width / 2, viewportY: currentSize.height / 2 }),
     });
   })();
 
@@ -44,7 +44,7 @@ const createVisualizationPlane = () => {
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
         const { coordinate, isSelected } = nodeData.get(node);
-        canvasService.drawPoint(coordinate.x, coordinate.y);
+        canvasService.drawPoint(coordinate);
 
         if (isSelected) {
           canvasService.drawPointSelection(coordinate);
@@ -71,6 +71,10 @@ const createVisualizationPlane = () => {
 
   interactionService.clickedNode((node) => {
     tools.getCurrentTool().clickedNode?.(node);
+  });
+
+  interactionService.draggingAnywhere((startCoordinate, endCoordinate, options) => {
+    tools.getCurrentTool().draggingAnywhere?.(startCoordinate, endCoordinate, options);
   });
 
   interactionService.draggingFromNode((startNode, endCoordinate) => {

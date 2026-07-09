@@ -1,4 +1,4 @@
-import iterateHypergraph from './iterateHypergraph.js';
+import iterateHypergraph from "./iterateHypergraph.js";
 
 const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
   const tools = {
@@ -41,8 +41,8 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
           isSelected: true,
         });
 
-        const deltaX = startCoordinate.x - endCoordinate.x;
-        const deltaY = startCoordinate.y - endCoordinate.y;
+        const deltaX = startCoordinate.viewportX - endCoordinate.viewportX;
+        const deltaY = startCoordinate.viewportY - endCoordinate.viewportY;
 
         iterateHypergraph(hypergraph, {
           nodeCallback: (node) => {
@@ -50,7 +50,13 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
             const { coordinate, isSelected } = currentNodeData;
 
             if (isSelected) {
-              nodeData.set(node, {...currentNodeData, coordinate: {x: coordinate.x - deltaX, y: coordinate.y - deltaY}});
+              nodeData.set(node, {
+                ...currentNodeData,
+                coordinate: canvasService.createCoordinate({
+                  viewportX: coordinate.viewportX - deltaX,
+                  viewportY: coordinate.viewportY - deltaY,
+                }),
+              });
             }
           },
         });
@@ -66,10 +72,10 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         canvasService.drawSelectionBox(startCoordinate, endCoordinate);
       },
       draggedFromEmptyCanvas: (startCoordinate, endCoordinate) => {
-        const left = Math.min(startCoordinate.x, endCoordinate.x);
-        const right = Math.max(startCoordinate.x, endCoordinate.x);
-        const top = Math.min(startCoordinate.y, endCoordinate.y);
-        const bottom = Math.max(startCoordinate.y, endCoordinate.y);
+        const left = Math.min(startCoordinate.viewportX, endCoordinate.viewportX);
+        const right = Math.max(startCoordinate.viewportX, endCoordinate.viewportX);
+        const top = Math.min(startCoordinate.viewportY, endCoordinate.viewportY);
+        const bottom = Math.max(startCoordinate.viewportY, endCoordinate.viewportY);
 
         iterateHypergraph(hypergraph, {
           nodeCallback: (node) => {
@@ -77,10 +83,10 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
             const { coordinate } = currentNodeData;
 
             if (
-              coordinate.x > left &&
-              coordinate.x < right &&
-              coordinate.y > top &&
-              coordinate.y < bottom
+              coordinate.viewportX > left &&
+              coordinate.viewportX < right &&
+              coordinate.viewportY > top &&
+              coordinate.viewportY < bottom
             ) {
               nodeData.set(node, { ...currentNodeData, isSelected: true });
             } else {
@@ -110,22 +116,33 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         redrawCanvas();
       },
     },
+    handTool: {
+      draggingAnywhere: (startCoordinate, endCoordinate, { incrementalChange }) => {
+        canvasService.pan({
+          viewportDeltaX: incrementalChange.viewportDeltaX,
+          viewportDeltaY: incrementalChange.viewportDeltaY,
+        });
+
+        redrawCanvas();
+      },
+    },
+    zoomInTool: {},
+    zoomOutTool: {},
+    eraserTool: {},
   };
 
   let currentTool = tools.lineTool;
 
-  const palette = document.querySelector('.palette');
-  const buttons = Array.from(palette.querySelectorAll('button'));
+  const palette = document.querySelector(".palette");
+  const buttons = Array.from(palette.querySelectorAll("button"));
 
   buttons.forEach((button) => {
-    button.addEventListener('click', (event) => {
-      const toolName = event.target
-        .closest('button')
-        .getAttribute('data-tool-name');
+    button.addEventListener("click", (event) => {
+      const toolName = event.target.closest("button").getAttribute("data-tool-name");
       currentTool = tools[toolName];
 
-      palette.querySelector('.selected').classList.remove('selected');
-      button.classList.add('selected');
+      palette.querySelector(".selected").classList.remove("selected");
+      button.classList.add("selected");
     });
   });
 

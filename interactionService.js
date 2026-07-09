@@ -49,24 +49,27 @@ const createInteractionsService = ({ canvas, canvasService }) => {
   let startCoordinate = null;
   let startNode = null;
   let isDragging = false;
+  let distanceDraggedSoFar = { x: 0, y: 0 };
 
-  const startInteraction = (event, {interactionType}) => {
+  const startInteraction = (event, { interactionType }) => {
     isClicking = true;
 
     startCoordinate = canvasService.getEventCoordinate(event);
-    const clickedNode = canvasService.findNodeAtCoordinate(startCoordinate, {interactionType});
+    const clickedNode = canvasService.findNodeAtCoordinate(startCoordinate, {
+      interactionType,
+    });
 
     startNode = clickedNode;
   };
 
-  const interactionMove = (event, {interactionType}) => {
+  const interactionMove = (event, { interactionType }) => {
     if (!isClicking) {
       return;
     }
     const dragThreshold = 10;
     const endCoordinate = canvasService.getEventCoordinate(event);
 
-    const dragDistance = canvasService.getDistance(
+    const dragDistance = canvasService.getViewportDistance(
       startCoordinate,
       endCoordinate,
     );
@@ -76,29 +79,53 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     }
 
     if (isDragging) {
-      listeners.draggingAnywhere?.(startCoordinate, endCoordinate);
+      const incrementalChange = {
+        viewportDeltaX:
+          startCoordinate.viewportX - endCoordinate.viewportX - distanceDraggedSoFar.x,
+        viewportDeltaY:
+          startCoordinate.viewportY - endCoordinate.viewportY - distanceDraggedSoFar.y,
+      };
+      
+      listeners.draggingAnywhere?.(startCoordinate, endCoordinate, {
+        incrementalChange,
+      });
 
-      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, {interactionType});
+      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, {
+        interactionType,
+      });
 
       if (startNode) {
         if (endNode) {
-          listeners.draggingBetweenNodes?.(startNode, endNode);
+          listeners.draggingBetweenNodes?.(startNode, endNode, {
+            incrementalChange,
+          });
         } else {
-          listeners.draggingFromNode?.(startNode, endCoordinate);
+          listeners.draggingFromNode?.(startNode, endCoordinate, {
+            incrementalChange,
+          });
         }
       } else {
-        listeners.draggingFromEmptyCanvas?.(startCoordinate, endCoordinate);
+        listeners.draggingFromEmptyCanvas?.(startCoordinate, endCoordinate, {
+          incrementalChange,
+        });
       }
+
+      distanceDraggedSoFar = {
+        x: startCoordinate.viewportX - endCoordinate.viewportX,
+        y: startCoordinate.viewportY - endCoordinate.viewportY,
+      };
     }
   };
 
-  const endInteraction = (event, {interactionType}) => {
+  const endInteraction = (event, { interactionType }) => {
     const endCoordinate = canvasService.getEventCoordinate(event);
 
     if (isDragging) {
       listeners.draggedAnywhere?.(startCoordinate, endCoordinate);
 
-      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, {interactionType});
+      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, {
+        interactionType,
+      });
 
       if (startNode) {
         if (endNode) {
@@ -122,33 +149,34 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     isClicking = false;
     isDragging = false;
     startCoordinate = null;
-  }
+    distanceDraggedSoFar = { x: 0, y: 0 };
+  };
 
   canvas.addEventListener('mousedown', (event) => {
-    startInteraction(event, {interactionType: 'mouse'});
+    startInteraction(event, { interactionType: 'mouse' });
   });
 
   canvas.addEventListener('touchstart', (event) => {
     event.preventDefault();
-    startInteraction(event, {interactionType: 'touch'});
+    startInteraction(event, { interactionType: 'touch' });
   });
 
   canvas.addEventListener('mousemove', (event) => {
-    interactionMove(event, {interactionType: 'mouse'});
+    interactionMove(event, { interactionType: 'mouse' });
   });
 
   canvas.addEventListener('touchmove', (event) => {
     event.preventDefault();
-    interactionMove(event, {interactionType: 'touch'});
+    interactionMove(event, { interactionType: 'touch' });
   });
 
   canvas.addEventListener('mouseup', (event) => {
-    endInteraction(event, {interactionType: 'mouse'});
+    endInteraction(event, { interactionType: 'mouse' });
   });
 
   canvas.addEventListener('touchend', (event) => {
     event.preventDefault();
-    endInteraction(event, {interactionType: 'touch'});
+    endInteraction(event, { interactionType: 'touch' });
   });
 
   return {
@@ -162,7 +190,7 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     draggingBetweenNodes,
     draggedBetweenNodes,
     draggingFromEmptyCanvas,
-    draggedFromEmptyCanvas
+    draggedFromEmptyCanvas,
   };
 };
 

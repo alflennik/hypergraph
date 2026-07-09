@@ -100,7 +100,7 @@ Nodes unreachable from Nexus are never visited.
 
 Factory `createCanvasService({ canvas, context, hypergraph, nodeData })` provides
 `drawPoint`, `drawLine`, `getEventCoordinate`, `findNodeAtCoordinate`, and
-`getDistance`. Hit-testing walks the full graph (O(n) per event).
+`getViewportDistance`. Hit-testing walks the full graph (O(n) per event).
 
 ### `interactionService.js`
 

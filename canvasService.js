@@ -1,9 +1,36 @@
 import iterateHypergraph from '/iterateHypergraph.js';
 
 const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
-  const getDistance = (coordinate1, coordinate2) => {
-    const deltaX = coordinate1.x - coordinate2.x;
-    const deltaY = coordinate1.y - coordinate2.y;
+  const viewportCoordinateTopLeft = { planeX: 0, planeY: 0 };
+
+  // Only one set of coordinates need to be provided per function call: viewport coordinates or plane coordinates.
+  const createCoordinate = ({ viewportX, viewportY, planeX, planeY }) => {
+    if (planeX === undefined || planeY === undefined) {
+      planeX = viewportX - viewportCoordinateTopLeft.planeX;
+      planeY = viewportY - viewportCoordinateTopLeft.planeY;
+    }
+
+    return {
+      planeX,
+      planeY,
+      get viewportX() {
+        return planeX - viewportCoordinateTopLeft.planeX;
+      },
+      get viewportY() {
+        return planeY - viewportCoordinateTopLeft.planeY;
+      },
+    };
+  };
+
+  const pan = ({ viewportDeltaX, viewportDeltaY }) => {
+    // TODO: Account for zoom here when zooming is implemented.
+    viewportCoordinateTopLeft.planeX -= viewportDeltaX;
+    viewportCoordinateTopLeft.planeY -= viewportDeltaY;
+  };
+
+  const getViewportDistance = (coordinate1, coordinate2) => {
+    const deltaX = coordinate1.viewportX - coordinate2.viewportX;
+    const deltaY = coordinate1.viewportY - coordinate2.viewportY;
 
     return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   };
@@ -13,7 +40,10 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
         const { coordinate } = nodeData.get(node);
-        const distanceFromClicked = getDistance(clickedCoordinate, coordinate);
+        const distanceFromClicked = getViewportDistance(
+          clickedCoordinate,
+          coordinate,
+        );
 
         const snappingThreshold = interactionType === 'touch' ? 25 : 10;
         if (distanceFromClicked < snappingThreshold) {
@@ -25,20 +55,20 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     return clickedNode;
   };
 
-  const drawPoint = (x, y) => {
+  const drawPoint = (coordinate) => {
     context.save();
     context.beginPath();
     context.fillStyle = '#4ee238';
     context.shadowColor = '#81b47b';
     context.shadowBlur = 4;
-    context.arc(x, y, 8, 0, 2 * Math.PI);
+    context.arc(coordinate.viewportX, coordinate.viewportY, 8, 0, 2 * Math.PI);
     context.fill();
     context.restore();
 
     context.save();
     context.beginPath();
     context.fillStyle = 'white';
-    context.arc(x, y, 6, 0, 2 * Math.PI);
+    context.arc(coordinate.viewportX, coordinate.viewportY, 6, 0, 2 * Math.PI);
     context.fill();
     context.restore();
   };
@@ -46,8 +76,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   const drawLine = (startCoordinate, endCoordinate) => {
     context.save();
     context.beginPath();
-    context.moveTo(startCoordinate.x, startCoordinate.y);
-    context.lineTo(endCoordinate.x, endCoordinate.y);
+    context.moveTo(startCoordinate.viewportX, startCoordinate.viewportY);
+    context.lineTo(endCoordinate.viewportX, endCoordinate.viewportY);
     context.strokeStyle = '#a3f697';
     context.shadowColor = '#81b47b';
     context.lineWidth = 2;
@@ -57,10 +87,18 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   };
 
   const drawSelectionBox = (startCoordinate, endCoordinate) => {
-    const topLeftX = Math.min(startCoordinate.x, endCoordinate.x);
-    const topLeftY = Math.min(startCoordinate.y, endCoordinate.y);
-    const width = Math.abs(endCoordinate.x - startCoordinate.x);
-    const height = Math.abs(endCoordinate.y - startCoordinate.y);
+    const topLeftX = Math.min(
+      startCoordinate.viewportX,
+      endCoordinate.viewportX,
+    );
+    const topLeftY = Math.min(
+      startCoordinate.viewportY,
+      endCoordinate.viewportY,
+    );
+    const width = Math.abs(endCoordinate.viewportX - startCoordinate.viewportX);
+    const height = Math.abs(
+      endCoordinate.viewportY - startCoordinate.viewportY,
+    );
 
     context.save();
     context.beginPath();
@@ -69,7 +107,6 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.strokeStyle = 'white';
     context.stroke();
     context.restore();
-
   };
 
   const drawPointSelection = (coordinate) => {
@@ -77,10 +114,10 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.beginPath();
     context.strokeStyle = 'white';
     context.lineWidth = 2;
-    context.arc(coordinate.x, coordinate.y, 12, 0, 2 * Math.PI);
+    context.arc(coordinate.viewportX, coordinate.viewportY, 12, 0, 2 * Math.PI);
     context.stroke();
     context.restore();
-  }
+  };
 
   const getEventCoordinate = (event) => {
     // const {clientX, clientY} = event.touches ? event.touches[0] : event;
@@ -99,20 +136,22 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
 
     const currentSize = canvas.getBoundingClientRect();
 
-    return {
-      x: clientX - currentSize.left,
-      y: clientY - currentSize.top,
-    };
+    return createCoordinate({
+      viewportX: clientX - currentSize.left,
+      viewportY: clientY - currentSize.top,
+    });
   };
 
   return {
     getEventCoordinate,
     drawPoint,
-    getDistance,
+    getViewportDistance,
     drawLine,
     findNodeAtCoordinate,
     drawSelectionBox,
     drawPointSelection,
+    createCoordinate,
+    pan,
   };
 };
 
