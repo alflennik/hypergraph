@@ -10,6 +10,9 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
 
         canvasService.drawLine(startCoordinate, endCoordinate);
       },
+      draggingFromNodeCanceled: () => {
+        redrawCanvas();
+      },
       draggedFromNode: (startNode, endCoordinate) => {
         const node = hypergraph.createEdgeFrom(startNode);
 
@@ -66,10 +69,16 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
       draggedFromNode: () => {
         // Save history state once undo/redo is implemented.
       },
+      draggingFromNodeCanceled: () => {
+        // Save history state once undo/redo is implemented.
+      },
       draggingFromEmptyCanvas: (startCoordinate, endCoordinate) => {
         redrawCanvas();
 
         canvasService.drawSelectionBox(startCoordinate, endCoordinate);
+      },
+      draggingFromEmptyCanvasCanceled: () => {
+        redrawCanvas();
       },
       draggedFromEmptyCanvas: (startCoordinate, endCoordinate) => {
         const left = Math.min(startCoordinate.viewportX, endCoordinate.viewportX);

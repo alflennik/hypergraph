@@ -4,7 +4,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   const viewportCoordinateTopLeft = { planeX: 0, planeY: 0 };
 
   // Only one set of coordinates need to be provided per function call: viewport coordinates or plane coordinates.
-  const createCoordinate = ({ viewportX, viewportY, planeX, planeY }) => {
+  const createCoordinate = ({ viewportX, viewportY, planeX, planeY, clientX, clientY }) => {
     if (planeX === undefined || planeY === undefined) {
       planeX = viewportX - viewportCoordinateTopLeft.planeX;
       planeY = viewportY - viewportCoordinateTopLeft.planeY;
@@ -13,6 +13,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     return {
       planeX,
       planeY,
+      clientX, // Only available in interactions
+      clientY, // Only available in interactions
       get viewportX() {
         return planeX - viewportCoordinateTopLeft.planeX;
       },
@@ -139,6 +141,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     return createCoordinate({
       viewportX: clientX - currentSize.left,
       viewportY: clientY - currentSize.top,
+      clientX, // Needed for interactions (hand tool) that mutate the viewport
+      clientY, // Needed for interactions (hand tool) that mutate the viewport
     });
   };
 

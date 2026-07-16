@@ -77,8 +77,16 @@ const createVisualizationPlane = () => {
     tools.getCurrentTool().draggingAnywhere?.(startCoordinate, endCoordinate, options);
   });
 
+  interactionService.draggingAnywhereCanceled((startCoordinate, endCoordinate, options) => {
+    tools.getCurrentTool().draggingAnywhereCanceled?.(startCoordinate, endCoordinate, options);
+  });
+
   interactionService.draggingFromNode((startNode, endCoordinate) => {
     tools.getCurrentTool().draggingFromNode?.(startNode, endCoordinate);
+  });
+
+  interactionService.draggingFromNodeCanceled((startNode, endCoordinate) => {
+    tools.getCurrentTool().draggingFromNodeCanceled?.(startNode, endCoordinate);
   });
 
   interactionService.draggedFromNode((startNode, endCoordinate) => {
@@ -95,6 +103,10 @@ const createVisualizationPlane = () => {
 
   interactionService.draggingFromEmptyCanvas((startCoordinate, endCoordinate) => {
     tools.getCurrentTool().draggingFromEmptyCanvas?.(startCoordinate, endCoordinate);
+  });
+
+  interactionService.draggingFromEmptyCanvasCanceled((startCoordinate, endCoordinate) => {
+    tools.getCurrentTool().draggingFromEmptyCanvasCanceled?.(startCoordinate, endCoordinate);
   });
 
   interactionService.draggedFromEmptyCanvas((startCoordinate, endCoordinate) => {
