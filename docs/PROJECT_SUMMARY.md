@@ -41,7 +41,7 @@ required — `file://` will not work.
 
 | Path | Role |
 |------|------|
-| `index.html` | Page shell: header, tool palette, full-viewport canvas |
+| `index.html` | Page shell: header, tool palette, full-plane canvas |
 | `style.css` | Layout, dark theme, palette styling |
 | `visualizationPlane.js` | Composition root — wires services, redraw loop, interactions |
 | `hypergraph.js` | Hypergraph factory: Map adjacency, Nexus, node/edge CRUD |
@@ -100,7 +100,7 @@ Nodes unreachable from Nexus are never visited.
 
 Factory `createCanvasService({ canvas, context, hypergraph, nodeData })` provides
 `drawPoint`, `drawLine`, `getEventCoordinate`, `findNodeAtCoordinate`, and
-`getViewportDistance`. Hit-testing walks the full graph (O(n) per event).
+`getCanvasDistance`. Hit-testing walks the full graph (O(n) per event).
 
 ### `interactionService.js`
 

@@ -30,7 +30,7 @@ const createVisualizationPlane = () => {
   (() => {
     const currentSize = canvas.getBoundingClientRect();
     nodeData.set(hypergraph.getNexus(), {
-      coordinate: canvasService.createCoordinate({ viewportX: currentSize.width / 2, viewportY: currentSize.height / 2 }),
+      coordinate: canvasService.createCoordinate({ planeX: currentSize.width / 2, planeY: currentSize.height / 2 }),
     });
   })();
 

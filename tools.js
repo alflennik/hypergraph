@@ -44,8 +44,8 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
           isSelected: true,
         });
 
-        const deltaX = startCoordinate.viewportX - endCoordinate.viewportX;
-        const deltaY = startCoordinate.viewportY - endCoordinate.viewportY;
+        const deltaX = startCoordinate.planeX - endCoordinate.planeX;
+        const deltaY = startCoordinate.planeY - endCoordinate.planeY;
 
         iterateHypergraph(hypergraph, {
           nodeCallback: (node) => {
@@ -56,8 +56,8 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
               nodeData.set(node, {
                 ...currentNodeData,
                 coordinate: canvasService.createCoordinate({
-                  viewportX: coordinate.viewportX - deltaX,
-                  viewportY: coordinate.viewportY - deltaY,
+                  planeX: coordinate.planeX - deltaX,
+                  planeY: coordinate.planeY - deltaY,
                 }),
               });
             }
@@ -81,10 +81,10 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         redrawCanvas();
       },
       draggedFromEmptyCanvas: (startCoordinate, endCoordinate) => {
-        const left = Math.min(startCoordinate.viewportX, endCoordinate.viewportX);
-        const right = Math.max(startCoordinate.viewportX, endCoordinate.viewportX);
-        const top = Math.min(startCoordinate.viewportY, endCoordinate.viewportY);
-        const bottom = Math.max(startCoordinate.viewportY, endCoordinate.viewportY);
+        const left = Math.min(startCoordinate.planeX, endCoordinate.planeX);
+        const right = Math.max(startCoordinate.planeX, endCoordinate.planeX);
+        const top = Math.min(startCoordinate.planeY, endCoordinate.planeY);
+        const bottom = Math.max(startCoordinate.planeY, endCoordinate.planeY);
 
         iterateHypergraph(hypergraph, {
           nodeCallback: (node) => {
@@ -92,10 +92,10 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
             const { coordinate } = currentNodeData;
 
             if (
-              coordinate.viewportX > left &&
-              coordinate.viewportX < right &&
-              coordinate.viewportY > top &&
-              coordinate.viewportY < bottom
+              coordinate.planeX > left &&
+              coordinate.planeX < right &&
+              coordinate.planeY > top &&
+              coordinate.planeY < bottom
             ) {
               nodeData.set(node, { ...currentNodeData, isSelected: true });
             } else {
@@ -128,8 +128,8 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
     handTool: {
       draggingAnywhere: (startCoordinate, endCoordinate, { incrementalChange }) => {
         canvasService.pan({
-          viewportDeltaX: incrementalChange.viewportDeltaX,
-          viewportDeltaY: incrementalChange.viewportDeltaY,
+          planeDeltaX: incrementalChange.planeDeltaX,
+          planeDeltaY: incrementalChange.planeDeltaY,
         });
 
         redrawCanvas();
