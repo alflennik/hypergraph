@@ -1,36 +1,38 @@
 import iterateHypergraph from '/iterateHypergraph.js';
 
 const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
-  const viewCoordinateTopLeft = { worldX: 0, worldY: 0 };
+  const viewCoordinateTopLeft = { planeX: 0, planeY: 0 };
 
-  // Only one set of coordinates need to be provided per function call: plane coordinates or canvas coordinates.
-  const createCoordinate = ({ worldX, worldY, viewX, viewY, }) => {
-    if (worldX === undefined || worldY === undefined) {
-      worldX = viewX - viewCoordinateTopLeft.worldX;
-      worldY = viewY - viewCoordinateTopLeft.worldY;
+  // Only one set of coordinates need to be provided per function call: view coordinates or plane coordinates.
+  const createCoordinate = ({ viewX, viewY, planeX, planeY, clientX, clientY }) => {
+    if (planeX === undefined || planeY === undefined) {
+      planeX = viewX - viewCoordinateTopLeft.planeX;
+      planeY = viewY - viewCoordinateTopLeft.planeY;
     }
 
     return {
-      canvasX,
-      canvasY,
-      get planeX() {
-        return canvasX - planeCoordinateTopLeft.canvasX;
+      planeX,
+      planeY,
+      clientX, // Only available in interactions
+      clientY, // Only available in interactions
+      get viewX() {
+        return planeX + viewCoordinateTopLeft.planeX;
       },
-      get planeY() {
-        return canvasY - planeCoordinateTopLeft.canvasY;
+      get viewY() {
+        return planeY + viewCoordinateTopLeft.planeY;
       },
     };
   };
 
-  const pan = ({ planeDeltaX, planeDeltaY }) => {
+  const pan = ({ viewDeltaX, viewDeltaY }) => {
     // TODO: Account for zoom here when zooming is implemented.
-    planeCoordinateTopLeft.canvasX -= planeDeltaX;
-    planeCoordinateTopLeft.canvasY -= planeDeltaY;
+    viewCoordinateTopLeft.planeX += viewDeltaX;
+    viewCoordinateTopLeft.planeY += viewDeltaY;
   };
 
-  const getPlaneDistance = (coordinate1, coordinate2) => {
-    const deltaX = coordinate1.planeX - coordinate2.planeX;
-    const deltaY = coordinate1.planeY - coordinate2.planeY;
+  const getViewDistance = (coordinate1, coordinate2) => {
+    const deltaX = coordinate1.viewX - coordinate2.viewX;
+    const deltaY = coordinate1.viewY - coordinate2.viewY;
 
     return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   };
@@ -40,10 +42,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
         const { coordinate } = nodeData.get(node);
-        const distanceFromClicked = getPlaneDistance(
-          clickedCoordinate,
-          coordinate,
-        );
+        const distanceFromClicked = getViewDistance(clickedCoordinate, coordinate);
 
         const snappingThreshold = interactionType === 'touch' ? 25 : 10;
         if (distanceFromClicked < snappingThreshold) {
@@ -61,14 +60,14 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.fillStyle = '#4ee238';
     context.shadowColor = '#81b47b';
     context.shadowBlur = 4;
-    context.arc(coordinate.planeX, coordinate.planeY, 8, 0, 2 * Math.PI);
+    context.arc(coordinate.viewX, coordinate.viewY, 8, 0, 2 * Math.PI);
     context.fill();
     context.restore();
 
     context.save();
     context.beginPath();
     context.fillStyle = 'white';
-    context.arc(coordinate.planeX, coordinate.planeY, 6, 0, 2 * Math.PI);
+    context.arc(coordinate.viewX, coordinate.viewY, 6, 0, 2 * Math.PI);
     context.fill();
     context.restore();
   };
@@ -76,8 +75,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   const drawLine = (startCoordinate, endCoordinate) => {
     context.save();
     context.beginPath();
-    context.moveTo(startCoordinate.planeX, startCoordinate.planeY);
-    context.lineTo(endCoordinate.planeX, endCoordinate.planeY);
+    context.moveTo(startCoordinate.viewX, startCoordinate.viewY);
+    context.lineTo(endCoordinate.viewX, endCoordinate.viewY);
     context.strokeStyle = '#a3f697';
     context.shadowColor = '#81b47b';
     context.lineWidth = 2;
@@ -87,18 +86,10 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   };
 
   const drawSelectionBox = (startCoordinate, endCoordinate) => {
-    const topLeftX = Math.min(
-      startCoordinate.canvasX,
-      endCoordinate.canvasX,
-    );
-    const topLeftY = Math.min(
-      startCoordinate.canvasY,
-      endCoordinate.canvasY,
-    );
-    const width = Math.abs(endCoordinate.canvasX - startCoordinate.canvasX);
-    const height = Math.abs(
-      endCoordinate.canvasY - startCoordinate.canvasY,
-    );
+    const topLeftX = Math.min(startCoordinate.viewX, endCoordinate.viewX);
+    const topLeftY = Math.min(startCoordinate.viewY, endCoordinate.viewY);
+    const width = Math.abs(endCoordinate.viewX - startCoordinate.viewX);
+    const height = Math.abs(endCoordinate.viewY - startCoordinate.viewY);
 
     context.save();
     context.beginPath();
@@ -114,13 +105,12 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.beginPath();
     context.strokeStyle = 'white';
     context.lineWidth = 2;
-    context.arc(coordinate.planeX, coordinate.planeY, 12, 0, 2 * Math.PI);
+    context.arc(coordinate.viewX, coordinate.viewY, 12, 0, 2 * Math.PI);
     context.stroke();
     context.restore();
   };
 
   const getEventCoordinate = (event) => {
-    // const {clientX, clientY} = event.touches ? event.touches[0] : event;
     let clientX;
     let clientY;
     if (event.changedTouches) {
@@ -137,15 +127,17 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     const currentSize = canvas.getBoundingClientRect();
 
     return createCoordinate({
-      planeX: clientX - currentSize.left,
-      planeY: clientY - currentSize.top,
+      viewX: clientX - currentSize.left,
+      viewY: clientY - currentSize.top,
+      clientX, // Needed for interactions (hand tool) that mutate the view
+      clientY, // Needed for interactions (hand tool) that mutate the view
     });
   };
 
   return {
     getEventCoordinate,
     drawPoint,
-    getPlaneDistance,
+    getViewDistance,
     drawLine,
     findNodeAtCoordinate,
     drawSelectionBox,

@@ -82,7 +82,7 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     const dragThreshold = 10;
     const endCoordinate = canvasService.getEventCoordinate(event);
 
-    const dragDistance = canvasService.getPlaneDistance(
+    const dragDistance = canvasService.getViewDistance(
       startCoordinate,
       endCoordinate,
     );
@@ -93,10 +93,8 @@ const createInteractionsService = ({ canvas, canvasService }) => {
 
     if (isDragging) {
       const incrementalChange = {
-        planeDeltaX:
-        endCoordinate.canvasX - startCoordinate.canvasX - distanceDraggedSoFar.x,
-        planeDeltaY:
-        endCoordinate.canvasY - startCoordinate.canvasY - distanceDraggedSoFar.y,
+        viewDeltaX: endCoordinate.clientX - startCoordinate.clientX - distanceDraggedSoFar.x,
+        viewDeltaY: endCoordinate.clientY - startCoordinate.clientY - distanceDraggedSoFar.y,
       };
       
       listeners.draggingAnywhere?.(startCoordinate, endCoordinate, {
@@ -124,8 +122,8 @@ const createInteractionsService = ({ canvas, canvasService }) => {
       }
       
       distanceDraggedSoFar = {
-        x: endCoordinate.canvasX - startCoordinate.canvasX,
-        y: endCoordinate.canvasY - startCoordinate.canvasY,
+        x: endCoordinate.clientX - startCoordinate.clientX,
+        y: endCoordinate.clientY - startCoordinate.clientY,
       };
     }
   };
