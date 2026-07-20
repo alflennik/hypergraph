@@ -4,7 +4,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   const viewCoordinateTopLeft = { worldX: 0, worldY: 0 };
 
   // Only one set of coordinates need to be provided per function call: plane coordinates or canvas coordinates.
-  const createCoordinate = ({ worldX, worldY, viewX, viewY, }) => {
+  const createCoordinate = ({ worldX, worldY, viewX, viewY }) => {
     if (worldX === undefined || worldY === undefined) {
       worldX = viewX - viewCoordinateTopLeft.worldX;
       worldY = viewY - viewCoordinateTopLeft.worldY;
@@ -40,10 +40,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
         const { coordinate } = nodeData.get(node);
-        const distanceFromClicked = getPlaneDistance(
-          clickedCoordinate,
-          coordinate,
-        );
+        const distanceFromClicked = getPlaneDistance(clickedCoordinate, coordinate);
 
         const snappingThreshold = interactionType === 'touch' ? 25 : 10;
         if (distanceFromClicked < snappingThreshold) {
@@ -87,18 +84,10 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   };
 
   const drawSelectionBox = (startCoordinate, endCoordinate) => {
-    const topLeftX = Math.min(
-      startCoordinate.canvasX,
-      endCoordinate.canvasX,
-    );
-    const topLeftY = Math.min(
-      startCoordinate.canvasY,
-      endCoordinate.canvasY,
-    );
+    const topLeftX = Math.min(startCoordinate.canvasX, endCoordinate.canvasX);
+    const topLeftY = Math.min(startCoordinate.canvasY, endCoordinate.canvasY);
     const width = Math.abs(endCoordinate.canvasX - startCoordinate.canvasX);
-    const height = Math.abs(
-      endCoordinate.canvasY - startCoordinate.canvasY,
-    );
+    const height = Math.abs(endCoordinate.canvasY - startCoordinate.canvasY);
 
     context.save();
     context.beginPath();

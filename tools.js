@@ -1,4 +1,4 @@
-import iterateHypergraph from "./iterateHypergraph.js";
+import iterateHypergraph from './iterateHypergraph.js';
 
 const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
   const tools = {
@@ -39,10 +39,7 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         const startNodeData = nodeData.get(startNode);
         const { coordinate: startCoordinate } = startNodeData;
 
-        nodeData.set(startNode, {
-          ...startNodeData,
-          isSelected: true,
-        });
+        nodeData.set(startNode, { ...startNodeData, isSelected: true });
 
         const deltaX = startCoordinate.planeX - endCoordinate.planeX;
         const deltaY = startCoordinate.planeY - endCoordinate.planeY;
@@ -142,16 +139,16 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
 
   let currentTool = tools.lineTool;
 
-  const palette = document.querySelector(".palette");
-  const buttons = Array.from(palette.querySelectorAll("button"));
+  const palette = document.querySelector('.palette');
+  const buttons = Array.from(palette.querySelectorAll('button'));
 
   buttons.forEach((button) => {
-    button.addEventListener("click", (event) => {
-      const toolName = event.target.closest("button").getAttribute("data-tool-name");
+    button.addEventListener('click', (event) => {
+      const toolName = event.target.closest('button').getAttribute('data-tool-name');
       currentTool = tools[toolName];
 
-      palette.querySelector(".selected").classList.remove("selected");
-      button.classList.add("selected");
+      palette.querySelector('.selected').classList.remove('selected');
+      button.classList.add('selected');
     });
   });
 

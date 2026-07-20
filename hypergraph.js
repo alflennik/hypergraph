@@ -5,7 +5,7 @@
 
 const createHypergraph = () => {
   const nodeConnect = new Map();
-  const nexus = { "nexus": "nexus" };
+  const nexus = { nexus: 'nexus' };
 
   // Initializing nodeConnect with one edge
   nodeConnect.set(nexus, []);
@@ -24,13 +24,13 @@ const createHypergraph = () => {
     return nexus;
   };
 
-  const createEdgeFrom = (startNode, {debuggingName} = {}) => {
+  const createEdgeFrom = (startNode, { debuggingName } = {}) => {
     let newNode;
     if (debuggingName) {
       newNode = { debuggingName };
     } else {
       newNode = {};
-    };
+    }
 
     nodeConnect.set(newNode, [startNode]);
     nodeConnect.set(startNode, [...nodeConnect.get(startNode), newNode]);
@@ -43,9 +43,9 @@ const createHypergraph = () => {
 
     if (!keys.includes(node1) || !keys.includes(node2)) {
       console.log("One or both nodes do not/doesn't exist");
-      console.log("node1", node1)
-      console.log("node2", node2)
-      console.log("keys", keys)
+      console.log('node1', node1);
+      console.log('node2', node2);
+      console.log('keys', keys);
 
       return;
     }
@@ -54,7 +54,7 @@ const createHypergraph = () => {
     const node2Connections = nodeConnect.get(node2) || [];
 
     if (node1Connections.includes(node2) || node2Connections.includes(node1)) {
-      console.log("These nodes are already connected");
+      console.log('These nodes are already connected');
 
       return;
     }
@@ -62,18 +62,15 @@ const createHypergraph = () => {
     node1Connections.push(node2);
     node2Connections.push(node1);
 
-
     nodeConnect.set(node1, node1Connections);
     nodeConnect.set(node2, node2Connections);
   };
-
-
 
   const getEdges = (node) => {
     const keys = [...nodeConnect.keys()];
 
     if (!keys.includes(node)) {
-      console.log("This node does not exist");
+      console.log('This node does not exist');
       return;
     }
 
@@ -81,18 +78,16 @@ const createHypergraph = () => {
     const randomlyOrdered = shuffle(nodeEdges);
 
     return randomlyOrdered;
-  }
-
-
+  };
 
   const deleteEdge = (node1, node2) => {
     const node1Connections = nodeConnect.get(node1) || [];
 
     if (node1Connections.includes(node2)) {
-      console.log("ITS IN THERE");
+      console.log('ITS IN THERE');
       node1Connections.splice(node1Connections.indexOf(node2), 1);
     } else {
-      console.log(`These nodes do not share any edges.`)
+      console.log(`These nodes do not share any edges.`);
       return;
     }
   };
@@ -124,13 +119,7 @@ const createHypergraph = () => {
   // console.log("deletedEdge_1: testNode_1", util.inspect(testEdges_2, { depth: null, colors: true }));
   // }
 
-  return {
-    getNexus,
-    createEdgeFrom,
-    createEdgeBetween,
-    getEdges,
-    deleteEdge,
-  };
-}
+  return { getNexus, createEdgeFrom, createEdgeBetween, getEdges, deleteEdge };
+};
 
 export default createHypergraph;

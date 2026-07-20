@@ -21,18 +21,18 @@ const iterateHypergraph = (hypergraph, { nodeCallback, edgeCallback }) => {
     if (iterationControl?.stopIteration) {
       stopIteration = true;
       return;
-    };
+    }
 
     const connectedNodes = hypergraph.getEdges(node);
 
     connectedNodes.forEach((connectedNode) => {
       if (!processedNodes.get(connectedNode) && !stopIteration) {
         const iterationControl = edgeCallback?.(node, connectedNode);
-        
+
         if (iterationControl?.stopIteration) {
           stopIteration = true;
           return;
-        };
+        }
       }
     });
 
@@ -45,7 +45,6 @@ const iterateHypergraph = (hypergraph, { nodeCallback, edgeCallback }) => {
 
   recurse(hypergraph.getNexus());
 };
-
 
 // const getNodes = (hypergraph) => {
 //   const graphNodes = [...hypergraph.keys()];
@@ -65,7 +64,6 @@ const iterateHypergraph = (hypergraph, { nodeCallback, edgeCallback }) => {
 //   const graphNodes = getNodes(hypergraph);
 //   const graphEdgesArr = getEdges(hypergraph);
 
-
 //   graphNodes.forEach((node, index) => {
 //     if (processedNodes.has(node)) {
 //       console.log(`Node already has ID`);
@@ -80,7 +78,6 @@ const iterateHypergraph = (hypergraph, { nodeCallback, edgeCallback }) => {
 //     // console.log("NODE", processedNodes.get(node))
 //   });
 //   // const check = [...processedNodes]
-
 
 //   // console.log("graphNodes", graphNodes);
 //   // console.log("graphEdgesArr", graphEdgesArr);

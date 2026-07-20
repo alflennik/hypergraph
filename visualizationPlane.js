@@ -16,21 +16,16 @@ const createVisualizationPlane = () => {
   const nodeData = new WeakMap();
 
   const hypergraph = createHypergraph();
-  const canvasService = createCanvasService({
-    canvas,
-    context,
-    hypergraph,
-    nodeData,
-  });
-  const interactionService = createInteractionService({
-    canvas,
-    canvasService,
-  });
+  const canvasService = createCanvasService({ canvas, context, hypergraph, nodeData });
+  const interactionService = createInteractionService({ canvas, canvasService });
 
   (() => {
     const currentSize = canvas.getBoundingClientRect();
     nodeData.set(hypergraph.getNexus(), {
-      coordinate: canvasService.createCoordinate({ planeX: currentSize.width / 2, planeY: currentSize.height / 2 }),
+      coordinate: canvasService.createCoordinate({
+        planeX: currentSize.width / 2,
+        planeY: currentSize.height / 2,
+      }),
     });
   })();
 
@@ -48,7 +43,7 @@ const createVisualizationPlane = () => {
 
         if (isSelected) {
           canvasService.drawPointSelection(coordinate);
-        };
+        }
       },
       edgeCallback: (node1, node2) => {
         const { coordinate: startCoordinate } = nodeData.get(node1);

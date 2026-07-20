@@ -68,9 +68,7 @@ const createInteractionsService = ({ canvas, canvasService }) => {
 
     startCoordinate = canvasService.getEventCoordinate(event);
 
-    const clickedNode = canvasService.findNodeAtCoordinate(startCoordinate, {
-      interactionType,
-    });
+    const clickedNode = canvasService.findNodeAtCoordinate(startCoordinate, { interactionType });
 
     startNode = clickedNode;
   };
@@ -82,10 +80,7 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     const dragThreshold = 10;
     const endCoordinate = canvasService.getEventCoordinate(event);
 
-    const dragDistance = canvasService.getPlaneDistance(
-      startCoordinate,
-      endCoordinate,
-    );
+    const dragDistance = canvasService.getPlaneDistance(startCoordinate, endCoordinate);
 
     if (dragDistance > dragThreshold) {
       isDragging = true;
@@ -93,36 +88,24 @@ const createInteractionsService = ({ canvas, canvasService }) => {
 
     if (isDragging) {
       const incrementalChange = {
-        planeDeltaX:
-        endCoordinate.canvasX - startCoordinate.canvasX - distanceDraggedSoFar.x,
-        planeDeltaY:
-        endCoordinate.canvasY - startCoordinate.canvasY - distanceDraggedSoFar.y,
+        planeDeltaX: endCoordinate.canvasX - startCoordinate.canvasX - distanceDraggedSoFar.x,
+        planeDeltaY: endCoordinate.canvasY - startCoordinate.canvasY - distanceDraggedSoFar.y,
       };
-      
-      listeners.draggingAnywhere?.(startCoordinate, endCoordinate, {
-        incrementalChange,
-      });
-      
-      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, {
-        interactionType,
-      });
-      
+
+      listeners.draggingAnywhere?.(startCoordinate, endCoordinate, { incrementalChange });
+
+      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, { interactionType });
+
       if (startNode) {
         if (endNode) {
-          listeners.draggingBetweenNodes?.(startNode, endNode, {
-            incrementalChange,
-          });
+          listeners.draggingBetweenNodes?.(startNode, endNode, { incrementalChange });
         } else {
-          listeners.draggingFromNode?.(startNode, endCoordinate, {
-            incrementalChange,
-          });
+          listeners.draggingFromNode?.(startNode, endCoordinate, { incrementalChange });
         }
       } else {
-        listeners.draggingFromEmptyCanvas?.(startCoordinate, endCoordinate, {
-          incrementalChange,
-        });
+        listeners.draggingFromEmptyCanvas?.(startCoordinate, endCoordinate, { incrementalChange });
       }
-      
+
       distanceDraggedSoFar = {
         x: endCoordinate.canvasX - startCoordinate.canvasX,
         y: endCoordinate.canvasY - startCoordinate.canvasY,
@@ -136,9 +119,7 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     if (isDragging) {
       listeners.draggedAnywhere?.(startCoordinate, endCoordinate);
 
-      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, {
-        interactionType,
-      });
+      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, { interactionType });
 
       if (startNode) {
         if (endNode) {
@@ -168,17 +149,17 @@ const createInteractionsService = ({ canvas, canvasService }) => {
   const cancelInteraction = (event, { interactionType }) => {
     if (!isDragging) {
       return;
-    };
+    }
 
     const endCoordinate = canvasService.getEventCoordinate(event);
 
     listeners.draggingAnywhereCanceled?.(startCoordinate, endCoordinate);
-    
+
     if (startNode) {
       listeners.draggingFromNodeCanceled?.(startNode, endCoordinate);
     } else {
       listeners.draggingFromEmptyCanvasCanceled?.(startCoordinate, endCoordinate);
-    };
+    }
 
     isClicking = false;
     isDragging = false;
