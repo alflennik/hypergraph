@@ -132,8 +132,20 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         redrawCanvas();
       },
     },
-    zoomInTool: {},
-    zoomOutTool: {},
+    zoomInTool: {
+      clickedAnywhere: (coordinate) => {
+        canvasService.zoomIn(coordinate);
+
+        redrawCanvas();
+      },
+    },
+    zoomOutTool: {
+      clickedAnywhere: (coordinate) => {
+        canvasService.zoomOut(coordinate);
+
+        redrawCanvas();
+      },
+    },
     eraserTool: {},
   };
 

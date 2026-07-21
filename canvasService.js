@@ -2,12 +2,13 @@ import iterateHypergraph from '/iterateHypergraph.js';
 
 const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   const viewCoordinateTopLeft = { planeX: 0, planeY: 0 };
+  let viewScale = 1;
 
   // Only one set of coordinates need to be provided per function call: view coordinates or plane coordinates.
   const createCoordinate = ({ viewX, viewY, planeX, planeY, clientX, clientY }) => {
     if (planeX === undefined || planeY === undefined) {
-      planeX = viewX - viewCoordinateTopLeft.planeX;
-      planeY = viewY - viewCoordinateTopLeft.planeY;
+      planeX = (viewX - viewCoordinateTopLeft.planeX) / viewScale;
+      planeY = (viewY - viewCoordinateTopLeft.planeY) / viewScale;
     }
 
     return {
@@ -16,18 +17,26 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
       clientX, // Only available in interactions
       clientY, // Only available in interactions
       get viewX() {
-        return planeX + viewCoordinateTopLeft.planeX;
+        return planeX * viewScale + viewCoordinateTopLeft.planeX;
       },
       get viewY() {
-        return planeY + viewCoordinateTopLeft.planeY;
+        return planeY * viewScale + viewCoordinateTopLeft.planeY;
       },
     };
   };
 
   const pan = ({ viewDeltaX, viewDeltaY }) => {
     // TODO: Account for zoom here when zooming is implemented.
-    viewCoordinateTopLeft.planeX += viewDeltaX;
-    viewCoordinateTopLeft.planeY += viewDeltaY;
+    viewCoordinateTopLeft.planeX += viewDeltaX / viewScale;
+    viewCoordinateTopLeft.planeY += viewDeltaY / viewScale;
+  };
+
+  const zoomIn = (anchorCoordinate) => {
+    viewScale *= 1.1;
+  };
+
+  const zoomOut = (anchorCoordinate) => {
+    viewScale /= 1.1;
   };
 
   const getViewDistance = (coordinate1, coordinate2) => {
@@ -111,7 +120,6 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   };
 
   const getEventCoordinate = (event) => {
-    // const {clientX, clientY} = event.touches ? event.touches[0] : event;
     let clientX;
     let clientY;
     if (event.changedTouches) {
@@ -146,6 +154,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     drawPointSelection,
     createCoordinate,
     pan,
+    zoomIn,
+    zoomOut,
   };
 };
 
