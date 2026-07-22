@@ -26,13 +26,31 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   };
 
   const pan = ({ viewDeltaX, viewDeltaY }) => {
-    // TODO: Account for zoom here when zooming is implemented.
     viewCoordinateTopLeft.planeX += viewDeltaX / viewScale;
     viewCoordinateTopLeft.planeY += viewDeltaY / viewScale;
   };
 
   const zoomIn = (anchorCoordinate) => {
+    // if (viewScale !== 1) {
+    //   debugger;
+    // }
+    const currentSize = canvas.getBoundingClientRect();
+
+    const viewPercentFromLeft = anchorCoordinate.viewX / currentSize.width;
+    const viewPercentFromTop = anchorCoordinate.viewY / currentSize.height;
+
+    const viewWidthToRemove = currentSize.width * 0.1;
+    const viewHeightToRemove = currentSize.height * 0.1;
+    
     viewScale *= 1.1;
+
+    const panX = viewPercentFromLeft * viewWidthToRemove * 1.1;
+    const panY = viewPercentFromTop * viewHeightToRemove * 1.1;
+
+    // Anchors the zoom
+    pan({ viewDeltaX: -panX, viewDeltaY: -panY });
+
+    // viewScale *= 1.1;
   };
 
   const zoomOut = (anchorCoordinate) => {
