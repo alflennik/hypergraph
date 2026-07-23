@@ -31,28 +31,40 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   };
 
   const zoomIn = (anchorCoordinate) => {
-    // if (viewScale !== 1) {
-    //   debugger;
-    // }
     const currentSize = canvas.getBoundingClientRect();
 
     const viewPercentFromLeft = anchorCoordinate.viewX / currentSize.width;
     const viewPercentFromTop = anchorCoordinate.viewY / currentSize.height;
 
-    const viewWidthToRemove = currentSize.width * 0.1;
-    const viewHeightToRemove = currentSize.height * 0.1;
+    const viewWidthToRemove = currentSize.width * 0.5;
+    const viewHeightToRemove = currentSize.height * 0.5;
 
     const panX = viewPercentFromLeft * viewWidthToRemove * -1;
     const panY = viewPercentFromTop * viewHeightToRemove * -1;
 
-    viewScale *= 1.1;
+    viewScale *= 1.5;
 
     // Anchors the zoom
     pan({ viewDeltaX: panX, viewDeltaY: panY });
   };
 
   const zoomOut = (anchorCoordinate) => {
-    viewScale /= 1.1;
+    const currentSize = canvas.getBoundingClientRect();
+
+    const viewPercentFromLeft = anchorCoordinate.viewX / currentSize.width;
+    const viewPercentFromTop = anchorCoordinate.viewY / currentSize.height;
+
+    const viewWidthToAdd = currentSize.width * 0.5;
+    const viewHeightToAdd = currentSize.height * 0.5;
+    
+    const panX = viewPercentFromLeft * viewWidthToAdd;
+    const panY = viewPercentFromTop * viewHeightToAdd;
+
+    
+    // Anchors the zoom
+    pan({ viewDeltaX: panX, viewDeltaY: panY });
+
+    viewScale /= 1.5;
   };
 
   const getViewDistance = (coordinate1, coordinate2) => {

@@ -147,6 +147,8 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
       },
     },
     eraserTool: {},
+    undoTool: {},
+    redoTool: {},
   };
 
   let currentTool = tools.lineTool;
