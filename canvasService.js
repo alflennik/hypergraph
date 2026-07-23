@@ -7,8 +7,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   // Only one set of coordinates need to be provided per function call: view coordinates or plane coordinates.
   const createCoordinate = ({ viewX, viewY, planeX, planeY, clientX, clientY }) => {
     if (planeX === undefined || planeY === undefined) {
-      planeX = (viewX - viewCoordinateTopLeft.planeX) / viewScale;
-      planeY = (viewY - viewCoordinateTopLeft.planeY) / viewScale;
+      planeX = viewX / viewScale - viewCoordinateTopLeft.planeX;
+      planeY = viewY / viewScale - viewCoordinateTopLeft.planeY;
     }
 
     return {
@@ -17,10 +17,10 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
       clientX, // Only available in interactions
       clientY, // Only available in interactions
       get viewX() {
-        return planeX * viewScale + viewCoordinateTopLeft.planeX;
+        return (planeX + viewCoordinateTopLeft.planeX) * viewScale;
       },
       get viewY() {
-        return planeY * viewScale + viewCoordinateTopLeft.planeY;
+        return (planeY + viewCoordinateTopLeft.planeY) * viewScale;
       },
     };
   };
@@ -41,16 +41,14 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
 
     const viewWidthToRemove = currentSize.width * 0.1;
     const viewHeightToRemove = currentSize.height * 0.1;
-    
+
+    const panX = viewPercentFromLeft * viewWidthToRemove * -1;
+    const panY = viewPercentFromTop * viewHeightToRemove * -1;
+
     viewScale *= 1.1;
 
-    const panX = viewPercentFromLeft * viewWidthToRemove * 1.1;
-    const panY = viewPercentFromTop * viewHeightToRemove * 1.1;
-
     // Anchors the zoom
-    pan({ viewDeltaX: -panX, viewDeltaY: -panY });
-
-    // viewScale *= 1.1;
+    pan({ viewDeltaX: panX, viewDeltaY: panY });
   };
 
   const zoomOut = (anchorCoordinate) => {
