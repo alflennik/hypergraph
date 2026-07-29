@@ -91,8 +91,8 @@ const createInteractionsService = ({ canvas, canvasService }) => {
 
     if (isDragging) {
       const incrementalChange = {
-        viewDeltaX: endCoordinate.clientX - startCoordinate.clientX - distanceDraggedSoFar.x,
-        viewDeltaY: endCoordinate.clientY - startCoordinate.clientY - distanceDraggedSoFar.y,
+        viewDeltaX: endCoordinate.scaledClientX - startCoordinate.scaledClientX - distanceDraggedSoFar.x,
+        viewDeltaY: endCoordinate.scaledClientY - startCoordinate.scaledClientY - distanceDraggedSoFar.y,
       };
 
       listeners.draggingAnywhere?.(startCoordinate, endCoordinate, { incrementalChange });
@@ -110,8 +110,8 @@ const createInteractionsService = ({ canvas, canvasService }) => {
       }
 
       distanceDraggedSoFar = {
-        x: endCoordinate.clientX - startCoordinate.clientX,
-        y: endCoordinate.clientY - startCoordinate.clientY,
+        x: endCoordinate.scaledClientX - startCoordinate.scaledClientX,
+        y: endCoordinate.scaledClientY - startCoordinate.scaledClientY,
       };
     }
   };

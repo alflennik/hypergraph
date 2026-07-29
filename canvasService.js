@@ -14,8 +14,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     return {
       planeX,
       planeY,
-      clientX, // Only available in interactions
-      clientY, // Only available in interactions
+      scaledClientX: clientX * window.devicePixelRatio, // Only available in interactions
+      scaledClientY: clientY * window.devicePixelRatio, // Only available in interactions
       get viewX() {
         return (planeX + viewCoordinateTopLeft.planeX) * viewScale;
       },
@@ -25,19 +25,27 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     };
   };
 
+  const getWidth = () => {
+    const currentSize = canvas.getBoundingClientRect();
+    return currentSize.width * window.devicePixelRatio;
+  };
+
+  const getHeight = () => {
+    const currentSize = canvas.getBoundingClientRect();
+    return currentSize.height * window.devicePixelRatio;
+  };
+
   const pan = ({ viewDeltaX, viewDeltaY }) => {
     viewCoordinateTopLeft.planeX += viewDeltaX / viewScale;
     viewCoordinateTopLeft.planeY += viewDeltaY / viewScale;
   };
 
   const zoomIn = (anchorCoordinate) => {
-    const currentSize = canvas.getBoundingClientRect();
+    const viewPercentFromLeft = anchorCoordinate.viewX / getWidth();
+    const viewPercentFromTop = anchorCoordinate.viewY / getHeight();
 
-    const viewPercentFromLeft = anchorCoordinate.viewX / currentSize.width;
-    const viewPercentFromTop = anchorCoordinate.viewY / currentSize.height;
-
-    const viewWidthToRemove = currentSize.width * 0.5;
-    const viewHeightToRemove = currentSize.height * 0.5;
+    const viewWidthToRemove = getWidth() * 0.5;
+    const viewHeightToRemove = getHeight() * 0.5;
 
     const panX = viewPercentFromLeft * viewWidthToRemove * -1;
     const panY = viewPercentFromTop * viewHeightToRemove * -1;
@@ -49,18 +57,15 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   };
 
   const zoomOut = (anchorCoordinate) => {
-    const currentSize = canvas.getBoundingClientRect();
+    const viewPercentFromLeft = anchorCoordinate.viewX / getWidth();
+    const viewPercentFromTop = anchorCoordinate.viewY / getHeight();
 
-    const viewPercentFromLeft = anchorCoordinate.viewX / currentSize.width;
-    const viewPercentFromTop = anchorCoordinate.viewY / currentSize.height;
+    const viewWidthToAdd = getWidth() * 0.5;
+    const viewHeightToAdd = getHeight() * 0.5;
 
-    const viewWidthToAdd = currentSize.width * 0.5;
-    const viewHeightToAdd = currentSize.height * 0.5;
-    
     const panX = viewPercentFromLeft * viewWidthToAdd;
     const panY = viewPercentFromTop * viewHeightToAdd;
 
-    
     // Anchors the zoom
     pan({ viewDeltaX: panX, viewDeltaY: panY });
 
@@ -96,15 +101,15 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.beginPath();
     context.fillStyle = '#4ee238';
     context.shadowColor = '#81b47b';
-    context.shadowBlur = 4;
-    context.arc(coordinate.viewX, coordinate.viewY, 8, 0, 2 * Math.PI);
+    context.shadowBlur = 8;
+    context.arc(coordinate.viewX, coordinate.viewY, 16, 0, 2 * Math.PI);
     context.fill();
     context.restore();
 
     context.save();
     context.beginPath();
     context.fillStyle = 'white';
-    context.arc(coordinate.viewX, coordinate.viewY, 6, 0, 2 * Math.PI);
+    context.arc(coordinate.viewX, coordinate.viewY, 12, 0, 2 * Math.PI);
     context.fill();
     context.restore();
   };
@@ -116,8 +121,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.lineTo(endCoordinate.viewX, endCoordinate.viewY);
     context.strokeStyle = '#a3f697';
     context.shadowColor = '#81b47b';
-    context.lineWidth = 2;
-    context.shadowBlur = 4;
+    context.lineWidth = 4;
+    context.shadowBlur = 8;
     context.stroke();
     context.restore();
   };
@@ -142,7 +147,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.beginPath();
     context.strokeStyle = 'white';
     context.lineWidth = 2;
-    context.arc(coordinate.viewX, coordinate.viewY, 12, 0, 2 * Math.PI);
+    context.arc(coordinate.viewX, coordinate.viewY, 24, 0, 2 * Math.PI);
     context.stroke();
     context.restore();
   };
@@ -165,8 +170,10 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
 
     // TODO: Prevent viewport zoom on desktop safari
     return createCoordinate({
-      viewX: clientX - currentSize.left,
-      viewY: clientY - currentSize.top,
+      // viewX: clientX - currentSize.left,
+      // viewY: clientY - currentSize.top,
+      viewX: (clientX - currentSize.left) * window.devicePixelRatio,
+      viewY: (clientY- currentSize.top) * window.devicePixelRatio,
       clientX, // Needed for interactions (hand tool) that mutate the view
       clientY, // Needed for interactions (hand tool) that mutate the view
     });
@@ -184,6 +191,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     pan,
     zoomIn,
     zoomOut,
+    getWidth,
+    getHeight,
   };
 };
 

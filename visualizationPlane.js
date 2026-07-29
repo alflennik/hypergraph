@@ -13,6 +13,7 @@ import iterateHypergraph from '/iterateHypergraph.js';
 const createVisualizationPlane = () => {
   const canvas = document.querySelector('canvas');
   const context = canvas.getContext('2d');
+
   const nodeData = new WeakMap();
 
   const hypergraph = createHypergraph();
@@ -20,18 +21,30 @@ const createVisualizationPlane = () => {
   const interactionService = createInteractionService({ canvas, canvasService });
 
   (() => {
-    const currentSize = canvas.getBoundingClientRect();
     nodeData.set(hypergraph.getNexus(), {
-      coordinate: canvasService.createCoordinate({ viewX: currentSize.width / 2, viewY: currentSize.height / 2 }),
+      coordinate: canvasService.createCoordinate({
+        viewX: canvasService.getWidth() / 2,
+        viewY: canvasService.getHeight() / 2,
+      }),
     });
   })();
 
+  // TEMP
+  window.devicePixelRatio = 2;
+
   const redrawCanvas = () => {
     context.reset();
+    
+    // Enable retina support
+    // context.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
 
-    const currentSize = canvas.getBoundingClientRect();
-    canvas.width = currentSize.width;
-    canvas.height = currentSize.height;
+    // const currentSize = canvas.getBoundingClientRect();
+    canvas.width = canvasService.getWidth();
+    canvas.height = canvasService.getHeight();
+    // canvas.width = currentSize.width;
+    // canvas.height = currentSize.height;
+    // canvas.width = currentSize.width * 2;
+    // canvas.height = currentSize.height * 2;
 
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
