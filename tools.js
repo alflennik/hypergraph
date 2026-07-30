@@ -1,6 +1,17 @@
 import iterateHypergraph from './iterateHypergraph.js';
 
 const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
+  const clearSelection = () => {
+    iterateHypergraph(hypergraph, {
+      nodeCallback: (node) => {
+        const currentNodeData = nodeData.get(node);
+        nodeData.set(node, { ...currentNodeData, isSelected: false });
+      },
+    });
+
+    redrawCanvas();
+  };
+
   const tools = {
     lineTool: {
       draggingFromNode: (startNode, endCoordinate) => {
@@ -37,6 +48,9 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         hypergraph.createEdgeBetween(startNode, endNode);
 
         redrawCanvas();
+      },
+      clickedEmptyCanvas: () => {
+        clearSelection();
       },
     },
     moveTool: {
@@ -112,14 +126,7 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         redrawCanvas();
       },
       clickedEmptyCanvas: () => {
-        iterateHypergraph(hypergraph, {
-          nodeCallback: (node) => {
-            const currentNodeData = nodeData.get(node);
-            nodeData.set(node, { ...currentNodeData, isSelected: false });
-          },
-        });
-
-        redrawCanvas();
+        clearSelection();
       },
       clickedNode: (node) => {
         const currentNodeData = nodeData.get(node);
@@ -138,6 +145,9 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         });
 
         redrawCanvas();
+      },
+      clickedEmptyCanvas: () => {
+        clearSelection();
       },
     },
     zoomInTool: {
