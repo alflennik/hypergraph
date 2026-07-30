@@ -58,6 +58,12 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         const startNodeData = nodeData.get(startNode);
         const { coordinate: startCoordinate } = startNodeData;
 
+        const isStartNodeSelected = nodeData.get(startNode).isSelected;
+        
+        if (!isStartNodeSelected) {
+          clearSelection();
+        }
+
         nodeData.set(startNode, { ...startNodeData, isSelected: true });
 
         const deltaX = startCoordinate.viewX - endCoordinate.viewX;
