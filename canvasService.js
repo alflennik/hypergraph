@@ -1,4 +1,5 @@
 import iterateHypergraph from '/iterateHypergraph.js';
+// TODO: REMIND ALEX TO FIX THE CLICK DISTANCE BECAUSE THE POINTS ARE BIGGER
 
 const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   const viewCoordinateTopLeft = { planeX: 0, planeY: 0 };
@@ -86,7 +87,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
         const { coordinate } = nodeData.get(node);
         const distanceFromClicked = getViewDistance(clickedCoordinate, coordinate);
 
-        const snappingThreshold = interactionType === 'touch' ? 25 : 10;
+        const snappingThreshold = (interactionType === 'touch' ? 25 : 10) * window.devicePixelRatio;
         if (distanceFromClicked < snappingThreshold) {
           clickedNode = node;
           return { stopIteration: true };
@@ -101,15 +102,15 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.beginPath();
     context.fillStyle = '#4ee238';
     context.shadowColor = '#81b47b';
-    context.shadowBlur = 8;
-    context.arc(coordinate.viewX, coordinate.viewY, 16, 0, 2 * Math.PI);
+    context.shadowBlur = 4 * window.devicePixelRatio;
+    context.arc(coordinate.viewX, coordinate.viewY, 8 * window.devicePixelRatio, 0, 2 * Math.PI);
     context.fill();
     context.restore();
 
     context.save();
     context.beginPath();
     context.fillStyle = 'white';
-    context.arc(coordinate.viewX, coordinate.viewY, 12, 0, 2 * Math.PI);
+    context.arc(coordinate.viewX, coordinate.viewY, 6 * window.devicePixelRatio, 0, 2 * Math.PI);
     context.fill();
     context.restore();
   };
@@ -121,8 +122,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.lineTo(endCoordinate.viewX, endCoordinate.viewY);
     context.strokeStyle = '#a3f697';
     context.shadowColor = '#81b47b';
-    context.lineWidth = 4;
-    context.shadowBlur = 8;
+    context.lineWidth = 2 * window.devicePixelRatio;
+    context.shadowBlur = 4 * window.devicePixelRatio;
     context.stroke();
     context.restore();
   };
@@ -146,8 +147,8 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     context.save();
     context.beginPath();
     context.strokeStyle = 'white';
-    context.lineWidth = 2;
-    context.arc(coordinate.viewX, coordinate.viewY, 24, 0, 2 * Math.PI);
+    context.lineWidth = 1 * window.devicePixelRatio;
+    context.arc(coordinate.viewX, coordinate.viewY, 12 * window.devicePixelRatio, 0, 2 * Math.PI);
     context.stroke();
     context.restore();
   };

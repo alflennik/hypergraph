@@ -30,7 +30,7 @@ const createVisualizationPlane = () => {
   })();
 
   // TEMP
-  window.devicePixelRatio = 2;
+  // window.devicePixelRatio = 2;
 
   const redrawCanvas = () => {
     context.reset();

@@ -77,7 +77,7 @@ const createInteractionsService = ({ canvas, canvasService }) => {
     if (!isClicking) {
       return;
     }
-    const dragThreshold = 10;
+    const dragThreshold = 5 * window.devicePixelRatio;
     const endCoordinate = canvasService.getEventCoordinate(event);
 
     const dragDistance = canvasService.getViewDistance(
