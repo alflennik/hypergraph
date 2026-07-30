@@ -32,36 +32,43 @@ const createVisualizationPlane = () => {
   // TEMP
   // window.devicePixelRatio = 2;
 
-  const redrawCanvas = () => {
+  const redrawCanvas = ({addToLineLayer, addToTopLayer} = {}) => {
     context.reset();
-    
-    // Enable retina support
-    // context.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
 
-    // const currentSize = canvas.getBoundingClientRect();
     canvas.width = canvasService.getWidth();
     canvas.height = canvasService.getHeight();
-    // canvas.width = currentSize.width;
-    // canvas.height = currentSize.height;
-    // canvas.width = currentSize.width * 2;
-    // canvas.height = currentSize.height * 2;
+
+    const edges = [];
+    const nodes = [];
 
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
-        const { coordinate, isSelected } = nodeData.get(node);
-        canvasService.drawPoint(coordinate);
-
-        if (isSelected) {
-          canvasService.drawPointSelection(coordinate);
-        }
+        nodes.push(node);
       },
       edgeCallback: (node1, node2) => {
-        const { coordinate: startCoordinate } = nodeData.get(node1);
-        const { coordinate: endCoordinate } = nodeData.get(node2);
-
-        canvasService.drawLine(startCoordinate, endCoordinate);
+        edges.push([node1, node2]);
       },
     });
+
+    edges.forEach(([node1, node2]) => {
+      const { coordinate: startCoordinate } = nodeData.get(node1);
+      const { coordinate: endCoordinate } = nodeData.get(node2);
+
+      canvasService.drawLine(startCoordinate, endCoordinate);
+    });
+
+    addToLineLayer?.();
+    
+    nodes.forEach((node) => {
+      const { coordinate, isSelected } = nodeData.get(node);
+      canvasService.drawPoint(coordinate);
+      
+      if (isSelected) {
+        canvasService.drawPointSelection(coordinate);
+      }
+    });
+
+    addToTopLayer?.();
   };
 
   const tools = createTools({ hypergraph, canvasService, redrawCanvas, nodeData });

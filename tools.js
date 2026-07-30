@@ -4,11 +4,14 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
   const tools = {
     lineTool: {
       draggingFromNode: (startNode, endCoordinate) => {
-        redrawCanvas();
+        redrawCanvas({
+          // Line layer is under the node layer. Lines are drawn before nodes.
+          addToLineLayer: () => {
+            const { coordinate: startCoordinate } = nodeData.get(startNode);
 
-        const { coordinate: startCoordinate } = nodeData.get(startNode);
-
-        canvasService.drawLine(startCoordinate, endCoordinate);
+            canvasService.drawLine(startCoordinate, endCoordinate);
+          },
+        });
       },
       draggingFromNodeCanceled: () => {
         redrawCanvas();
@@ -21,12 +24,14 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         redrawCanvas();
       },
       draggingBetweenNodes: (startNode, endNode) => {
-        redrawCanvas();
+        redrawCanvas({
+          addToLineLayer: () => {
+            const { coordinate: startCoordinate } = nodeData.get(startNode);
+            const { coordinate: endCoordinate } = nodeData.get(endNode);
 
-        const { coordinate: startCoordinate } = nodeData.get(startNode);
-        const { coordinate: endCoordinate } = nodeData.get(endNode);
-
-        canvasService.drawLine(startCoordinate, endCoordinate);
+            canvasService.drawLine(startCoordinate, endCoordinate);
+          },
+        });
       },
       draggedBetweenNodes: (startNode, endNode) => {
         hypergraph.createEdgeBetween(startNode, endNode);
@@ -64,15 +69,18 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         redrawCanvas();
       },
       draggedFromNode: () => {
-        // Save history state once undo/redo is implemented.
+        // Save history state once undo/redo is implemented
       },
       draggingFromNodeCanceled: () => {
-        // Save history state once undo/redo is implemented.
+        // Save history state once undo/redo is implemented
       },
       draggingFromEmptyCanvas: (startCoordinate, endCoordinate) => {
-        redrawCanvas();
-
-        canvasService.drawSelectionBox(startCoordinate, endCoordinate);
+        redrawCanvas({
+          // Top layer is above line layer and node layer
+          addToTopLayer: () => {
+            canvasService.drawSelectionBox(startCoordinate, endCoordinate);
+          },
+        });
       },
       draggingFromEmptyCanvasCanceled: () => {
         redrawCanvas();
