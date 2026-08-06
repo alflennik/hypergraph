@@ -170,7 +170,19 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         redrawCanvas();
       },
     },
-    eraserTool: {},
+    eraserTool: {
+      hoveredNode: (node) => {
+        console.log("HOVERED-NODE");
+      },
+
+      hoveredEdge: (startNode, endNode) => {
+        console.log("HOVERED-EDGE");
+      },
+
+      hoveredEmptyCanvas: () => {
+        console.log("HOVERED-EMPTY-CANVAS");
+      },
+    },
     undoTool: {},
     redoTool: {},
   };

@@ -1,5 +1,4 @@
 import iterateHypergraph from '/iterateHypergraph.js';
-// TODO: REMIND ALEX TO FIX THE CLICK DISTANCE BECAUSE THE POINTS ARE BIGGER
 
 const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   const viewCoordinateTopLeft = { planeX: 0, planeY: 0 };
@@ -80,21 +79,76 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   };
 
-  const findNodeAtCoordinate = (clickedCoordinate, { interactionType }) => {
-    let clickedNode;
+  const getViewDistanceToEdge = (edgeStartCoordinate, edgeEndCoordinate, coordinate) => {
+    const interpolate = (value1, value2, position) => {
+      return value1 + position * (value2 - value1);
+    };
+
+    const deltaX = edgeEndCoordinate.viewX - edgeStartCoordinate.viewX;
+    const deltaY = edgeEndCoordinate.viewY - edgeStartCoordinate.viewY;
+
+    const positionAlongInfiniteLine =
+      ((coordinate.viewX - edgeStartCoordinate.viewX) * deltaX +
+        (coordinate.viewY - edgeStartCoordinate.viewY) * deltaY) /
+      (deltaX * deltaX + deltaY * deltaY);
+
+    const positionAlongLine = Math.min(1, Math.max(0, positionAlongInfiniteLine));
+
+    const x = interpolate(edgeStartCoordinate.viewX, edgeEndCoordinate.viewX, positionAlongLine);
+    const y = interpolate(edgeStartCoordinate.viewY, edgeEndCoordinate.viewY, positionAlongLine);
+
+    const closestCoordinateOnLine = createCoordinate({ viewX: x, viewY: y });
+
+    return getViewDistance(coordinate, closestCoordinateOnLine);
+  };
+
+  const findNodeAtCoordinate = (coordinate, { interactionType }) => {
+    let bestNode;
+    let bestDistance = Infinity;
+
     iterateHypergraph(hypergraph, {
       nodeCallback: (node) => {
-        const { coordinate } = nodeData.get(node);
-        const distanceFromClicked = getViewDistance(clickedCoordinate, coordinate);
+        const { coordinate: nodeCoordinate } = nodeData.get(node);
+        const distanceFromNode = getViewDistance(coordinate, nodeCoordinate);
 
         const snappingThreshold = (interactionType === 'touch' ? 25 : 10) * window.devicePixelRatio;
-        if (distanceFromClicked < snappingThreshold) {
-          clickedNode = node;
-          return { stopIteration: true };
+        if (distanceFromNode < snappingThreshold && distanceFromNode < bestDistance) {
+          bestNode = node;
+
+          bestDistance = distanceFromNode;
         }
       },
     });
-    return clickedNode;
+
+    return bestNode;
+  };
+
+  const findEdgeAtCoordinate = (coordinate, { interactionType }) => {
+    let bestEdge;
+    let bestDistance = Infinity;
+
+    iterateHypergraph(hypergraph, {
+      edgeCallback: (startNode, endNode) => {
+        const { coordinate: edgeStartCoordinate } = nodeData.get(startNode);
+        const { coordinate: edgeEndCoordinate } = nodeData.get(endNode);
+
+        const distanceFromEdge = getViewDistanceToEdge(
+          edgeStartCoordinate,
+          edgeEndCoordinate,
+          coordinate,
+        );
+
+        const snappingThreshold = (interactionType === 'touch' ? 25 : 10) * window.devicePixelRatio;
+
+        if (distanceFromEdge < snappingThreshold && distanceFromEdge < bestDistance) {
+          bestEdge = [startNode, endNode];
+
+          bestDistance = distanceFromEdge;
+        }
+      },
+    });
+
+    return bestEdge;
   };
 
   const drawPoint = (coordinate) => {
@@ -174,7 +228,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
       // viewX: clientX - currentSize.left,
       // viewY: clientY - currentSize.top,
       viewX: (clientX - currentSize.left) * window.devicePixelRatio,
-      viewY: (clientY- currentSize.top) * window.devicePixelRatio,
+      viewY: (clientY - currentSize.top) * window.devicePixelRatio,
       clientX, // Needed for interactions (hand tool) that mutate the view
       clientY, // Needed for interactions (hand tool) that mutate the view
     });
@@ -184,8 +238,10 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     getEventCoordinate,
     drawPoint,
     getViewDistance,
+    getViewDistanceToEdge,
     drawLine,
     findNodeAtCoordinate,
+    findEdgeAtCoordinate,
     drawSelectionBox,
     drawPointSelection,
     createCoordinate,

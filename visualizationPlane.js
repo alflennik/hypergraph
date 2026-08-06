@@ -73,6 +73,18 @@ const createVisualizationPlane = () => {
 
   const tools = createTools({ hypergraph, canvasService, redrawCanvas, nodeData });
 
+  interactionService.hoveredNode((node) => {
+    tools.getCurrentTool().hoveredNode?.(node);
+  });
+
+  interactionService.hoveredEdge((startNode, endNode) => {
+    tools.getCurrentTool().hoveredEdge?.(startNode, endNode);
+  });
+
+  interactionService.hoveredEmptyCanvas(() => {
+    tools.getCurrentTool().hoveredEmptyCanvas?.();
+  });
+
   interactionService.clickedAnywhere((coordinate) => {
     tools.getCurrentTool().clickedAnywhere?.(coordinate);
   });

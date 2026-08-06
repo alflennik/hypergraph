@@ -1,6 +1,18 @@
 const createInteractionsService = ({ canvas, canvasService }) => {
   const listeners = {};
 
+  const hoveredNode = (callback) => {
+    listeners.hoveredNode = callback;
+  };
+
+  const hoveredEdge = (callback) => {
+    listeners.hoveredEdge = callback;
+  };
+
+  const hoveredEmptyCanvas = (callback) => {
+    listeners.hoveredEmptyCanvas = callback;
+  };
+
   const clickedAnywhere = (callback) => {
     listeners.clickedAnywhere = callback;
   };
@@ -62,6 +74,8 @@ const createInteractionsService = ({ canvas, canvasService }) => {
   let startNode = null;
   let isDragging = false;
   let distanceDraggedSoFar = { x: 0, y: 0 };
+  let currentHoveredNode = null;
+  let currentHoveredEdge = null;
 
   const startInteraction = (event, { interactionType }) => {
     isClicking = true;
@@ -74,30 +88,57 @@ const createInteractionsService = ({ canvas, canvasService }) => {
   };
 
   const moveInteraction = (event, { interactionType }) => {
+    const endCoordinate = canvasService.getEventCoordinate(event);
+
+    const hoveredNode = canvasService.findNodeAtCoordinate(endCoordinate, { interactionType });
+
+    const hoveredEdge = canvasService.findEdgeAtCoordinate(endCoordinate, { interactionType });
+
+    if (hoveredNode) {
+      if (hoveredNode !== currentHoveredNode) {
+        listeners.hoveredNode?.(hoveredNode);
+
+        currentHoveredNode = hoveredNode;
+        currentHoveredEdge = null;
+      }
+    } else if (hoveredEdge) {
+      if (!(currentHoveredEdge && hoveredEdge[0] === currentHoveredEdge[0] && hoveredEdge[1] === currentHoveredEdge[1])) {
+        listeners.hoveredEdge?.(hoveredEdge);
+
+        currentHoveredEdge = hoveredEdge;
+        currentHoveredNode = null;
+      }
+    } else {
+      if (currentHoveredNode !== null || currentHoveredEdge !== null) {
+        listeners.hoveredEmptyCanvas?.();
+
+        currentHoveredNode = null;
+        currentHoveredEdge = null;
+      }
+    };
+
     if (!isClicking) {
       return;
     }
     const dragThreshold = 5 * window.devicePixelRatio;
-    const endCoordinate = canvasService.getEventCoordinate(event);
 
-    const dragDistance = canvasService.getViewDistance(
-      startCoordinate,
-      endCoordinate,
-    );
+    const dragDistance = canvasService.getViewDistance(startCoordinate, endCoordinate);
 
     if (dragDistance > dragThreshold) {
       isDragging = true;
     }
 
     if (isDragging) {
+      const endNode = hoveredNode;
+
       const incrementalChange = {
-        viewDeltaX: endCoordinate.scaledClientX - startCoordinate.scaledClientX - distanceDraggedSoFar.x,
-        viewDeltaY: endCoordinate.scaledClientY - startCoordinate.scaledClientY - distanceDraggedSoFar.y,
+        viewDeltaX:
+          endCoordinate.scaledClientX - startCoordinate.scaledClientX - distanceDraggedSoFar.x,
+        viewDeltaY:
+          endCoordinate.scaledClientY - startCoordinate.scaledClientY - distanceDraggedSoFar.y,
       };
 
       listeners.draggingAnywhere?.(startCoordinate, endCoordinate, { incrementalChange });
-
-      const endNode = canvasService.findNodeAtCoordinate(endCoordinate, { interactionType });
 
       if (startNode) {
         if (endNode) {
@@ -208,6 +249,9 @@ const createInteractionsService = ({ canvas, canvasService }) => {
   });
 
   return {
+    hoveredNode,
+    hoveredEdge,
+    hoveredEmptyCanvas,
     clickedAnywhere,
     clickedNode,
     clickedEmptyCanvas,
