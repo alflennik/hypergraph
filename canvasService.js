@@ -1,5 +1,3 @@
-import iterateHypergraph from '/iterateHypergraph.js';
-
 const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
   const viewCoordinateTopLeft = { planeX: 0, planeY: 0 };
   let viewScale = 1;
@@ -106,7 +104,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     let bestNode;
     let bestDistance = Infinity;
 
-    iterateHypergraph(hypergraph, {
+    hypergraph.iterateHypergraph({
       nodeCallback: (node) => {
         const { coordinate: nodeCoordinate } = nodeData.get(node);
         const distanceFromNode = getViewDistance(coordinate, nodeCoordinate);
@@ -127,7 +125,7 @@ const createCanvasService = ({ canvas, context, hypergraph, nodeData }) => {
     let bestEdge;
     let bestDistance = Infinity;
 
-    iterateHypergraph(hypergraph, {
+    hypergraph.iterateHypergraph({
       edgeCallback: (startNode, endNode) => {
         const { coordinate: edgeStartCoordinate } = nodeData.get(startNode);
         const { coordinate: edgeEndCoordinate } = nodeData.get(endNode);

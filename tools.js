@@ -1,8 +1,6 @@
-import iterateHypergraph from './iterateHypergraph.js';
-
 const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
   const clearSelection = () => {
-    iterateHypergraph(hypergraph, {
+    hypergraph.iterateHypergraph({
       nodeCallback: (node) => {
         const currentNodeData = nodeData.get(node);
         nodeData.set(node, { ...currentNodeData, isSelected: false });
@@ -59,7 +57,7 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         const { coordinate: startCoordinate } = startNodeData;
 
         const isStartNodeSelected = nodeData.get(startNode).isSelected;
-        
+
         if (!isStartNodeSelected) {
           clearSelection();
         }
@@ -69,7 +67,7 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         const deltaX = startCoordinate.viewX - endCoordinate.viewX;
         const deltaY = startCoordinate.viewY - endCoordinate.viewY;
 
-        iterateHypergraph(hypergraph, {
+        hypergraph.iterateHypergraph({
           nodeCallback: (node) => {
             const currentNodeData = nodeData.get(node);
             const { coordinate, isSelected } = currentNodeData;
@@ -111,7 +109,7 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
         const top = Math.min(startCoordinate.viewY, endCoordinate.viewY);
         const bottom = Math.max(startCoordinate.viewY, endCoordinate.viewY);
 
-        iterateHypergraph(hypergraph, {
+        hypergraph.iterateHypergraph({
           nodeCallback: (node) => {
             const currentNodeData = nodeData.get(node);
             const { coordinate } = currentNodeData;
@@ -172,15 +170,18 @@ const createTools = ({ hypergraph, canvasService, redrawCanvas, nodeData }) => {
     },
     eraserTool: {
       hoveredNode: (node) => {
-        console.log("HOVERED-NODE");
+        const {unreachableNodeCount} = hypergraph.findUnreachableNodesAndEdges({nodesToDelete: [node]});
+        console.log('unreachableNodeCount', unreachableNodeCount);
       },
 
-      hoveredEdge: (startNode, endNode) => {
-        console.log("HOVERED-EDGE");
+      hoveredEdge: ([startNode, endNode]) => {
+        const {unreachableEdgeCount} = hypergraph.findUnreachableNodesAndEdges({edgesToDelete: [[startNode, endNode]]});
+
+        console.log('unreachableEdgeCount:', unreachableEdgeCount);
       },
 
       hoveredEmptyCanvas: () => {
-        console.log("HOVERED-EMPTY-CANVAS");
+        console.log('HOVERED-EMPTY-CANVAS');
       },
     },
     undoTool: {},

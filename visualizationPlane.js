@@ -2,13 +2,6 @@ import createHypergraph from '/hypergraph.js';
 import createTools from '/tools.js';
 import createInteractionService from '/interactionService.js';
 import createCanvasService from '/canvasService.js';
-import iterateHypergraph from '/iterateHypergraph.js';
-// getNexus,
-// createNode,
-// createEdge,
-// getEdges,
-// deleteEdge,
-// nodeConnect
 
 const createVisualizationPlane = () => {
   const canvas = document.querySelector('canvas');
@@ -32,7 +25,7 @@ const createVisualizationPlane = () => {
   // TEMP
   // window.devicePixelRatio = 2;
 
-  const redrawCanvas = ({addToLineLayer, addToTopLayer} = {}) => {
+  const redrawCanvas = ({ addToLineLayer, addToTopLayer } = {}) => {
     context.reset();
 
     canvas.width = canvasService.getWidth();
@@ -41,7 +34,7 @@ const createVisualizationPlane = () => {
     const edges = [];
     const nodes = [];
 
-    iterateHypergraph(hypergraph, {
+    hypergraph.iterateHypergraph({
       nodeCallback: (node) => {
         nodes.push(node);
       },
@@ -58,11 +51,11 @@ const createVisualizationPlane = () => {
     });
 
     addToLineLayer?.();
-    
+
     nodes.forEach((node) => {
       const { coordinate, isSelected } = nodeData.get(node);
       canvasService.drawPoint(coordinate);
-      
+
       if (isSelected) {
         canvasService.drawPointSelection(coordinate);
       }
